@@ -148,7 +148,7 @@ class ClientHandler(threading.Thread):
 
     def disconnect(self):
         """Disconnect the client."""
-        if not self.conn._closed:
+        if self.conn and not self.conn._closed:
             self.conn.close()
             self.server.remove_client(self)
 
