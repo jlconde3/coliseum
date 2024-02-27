@@ -4,8 +4,8 @@ import socket
 import threading
 
 
-from config import logger
-from utils import Message
+from utils import logger
+from messages import Message
 
 # Carga de las variables de entorno
 
@@ -14,12 +14,8 @@ from utils import Message
 class Client(threading.Thread):
 
     def __init__(self):
-        self.conn: socket.socket = None
-        self.addr:tuple = ()
 
-        self._host = self.addr[0]
-        self._port = self.addr[1]
-
+        self.sock: socket.socket = None
         self.server_host = os.getenv("SERVER_HOST")
         self.server_port = int(os.getenv("SERVER_PORT"))
         self.id:str = None
@@ -31,18 +27,18 @@ class Client(threading.Thread):
         
         try:
             # Envio del mensaje de conexión
-            message = Message(None,"new_user")
-            self.conn.sendall(message.encode())
+            message = Message(sender_id=None,status=201,content="new_user")
+            self.sock.sendall(message.encode())
             logger.debug("Connection Message send to server")
 
             # Respuesta del servidor indicando el nombre de usuario
-            raw_message = self.conn.recv(1024)
+            raw_message = self.sock.recv(1024)
             message:Message = Message.create(raw_message)
 
             # Si el status es incorrecto cierra la conexión
             if message.status !=200:
                 message.print()
-                self.conn.close()
+                self.sock.close()
                 logger.warning("Connection Refused")
                 raise ConnectionRefusedError()
         
@@ -57,17 +53,16 @@ class Client(threading.Thread):
             raise
 
     def _send_message(self):
-
         try:
             while True:
-                content = input()
+                content = input(f"@{self.id}:")
 
                 if content.lower() == 'exit':
                     break
 
                 logger.debug("Sending message to server")
-                message = Message(self._host,self.id,content)
-                self.conn.sendall(message.encode())
+                message = Message(sender_id = self.id,content=content)
+                self.sock.sendall(message.encode())
         
         except Exception as error:
             logger.error(error)
@@ -75,10 +70,9 @@ class Client(threading.Thread):
 
 
     def _recive_message(self):
-
         try:
             while True:
-                raw_message = self.conn.recv(1024)
+                raw_message = self.sock.recv(1024)
                 if not raw_message:
                     break
                 
@@ -98,7 +92,7 @@ class Client(threading.Thread):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             
-            self.conn, self.addr = sock
+            self.sock = sock
 
             logger.debug("Connecting to server...")
             sock.connect((self.server_host, self.server_port))

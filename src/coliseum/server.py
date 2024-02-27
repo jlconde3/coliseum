@@ -1,10 +1,9 @@
 import os
 import socket
-import json
 import threading
 
-from config import logger
-from utils import Message
+from utils import logger
+from messages import Message
 
 
 
@@ -12,16 +11,15 @@ class Server:
     def __init__(self):
         self._host = os.getenv("SERVER_HOST")
         self._port = int(os.getenv("SERVER_PORT"))
-        
+
         self._lock = threading.Lock()
         self._client_counter = 0  # Counter for generating unique client IDs
-
         self.clients: list[ClientHandler] = []
 
     
     def _send_reject_message(client_handler:'ClientHandler'):
         try:
-            message = Message(sender="Server", status=500,content="server_full")
+            message = Message(sender_id="Server", status=500,content="server_full")
             client_handler.conn.sendall(message.encode())
         except Exception as error:
             logger.error(error)
@@ -62,7 +60,7 @@ class Server:
     def _broadcast_user_id(self,client_handler:'ClientHandler'):
         logger.info("Sending user id to client")
         try:
-            message = Message(sender="Server", content=client_handler.id)
+            message = Message(sender_id="Server", content=client_handler.id)
             client_handler.conn.sendall(message.encode())
         except Exception as error:
             logger.error(error)
