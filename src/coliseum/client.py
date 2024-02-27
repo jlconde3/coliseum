@@ -1,46 +1,29 @@
 
 import os
 import socket
-import json
 import threading
-import logging
 
 
-from dotenv import find_dotenv, load_dotenv
-from dataclasses import dataclass
+from config import logger
+from utils import Message
 
 # Carga de las variables de entorno
-
-path = find_dotenv()
-if path:
-    load_dotenv()
-
-
-def configure_logging():
-    # Logging manager configuration
-    logger = logging.getLogger("coliseum_client")
-    logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(f"coliseum_client.log")
-    formatter = logging.Formatter('%(asctime)s - %(name)s- %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    return logger
-
 
     
 
 class Client(threading.Thread):
 
-    
     def __init__(self):
-        self._host = os.getenv("SERVER_HOST")
-        self._port = int(os.getenv("SERVER_PORT"))
-        self.sock:socket.socket = None
-        self.user_id:str = None
+        self.conn: socket.socket = None
+        self.addr:tuple = ()
 
-    @staticmethod
-    def stdout_message(message:Message):
-        print(f"{message.sender}:{message.content}")
+        self._host = self.addr[0]
+        self._port = self.addr[1]
+
+        self.server_host = os.getenv("SERVER_HOST")
+        self.server_port = int(os.getenv("SERVER_PORT"))
+        self.id:str = None
+    
 
     def _initial_connection(self):
         
@@ -49,17 +32,25 @@ class Client(threading.Thread):
         try:
             # Envio del mensaje de conexión
             message = Message(None,"new_user")
-            self.sock.sendall(message.to_bytes())
+            self.conn.sendall(message.encode())
             logger.debug("Connection Message send to server")
 
             # Respuesta del servidor indicando el nombre de usuario
-            response = self.sock.recv(1024)
-            message:Message = create_message(response)
-            self.stdout_message(message)
-            self.user_id = message.content
-            
-            logger.info(f"Client connected to server with id:{self.user_id}")
-            print(f"You are now online! Your ID: {self.user_id}")
+            raw_message = self.conn.recv(1024)
+            message:Message = Message.create(raw_message)
+
+            # Si el status es incorrecto cierra la conexión
+            if message.status !=200:
+                message.print()
+                self.conn.close()
+                logger.warning("Connection Refused")
+                raise ConnectionRefusedError()
+        
+            # Si el status es correcto implica que ha accedido
+            # al sistema y el contenido es el ID del cliente
+            self.id = message.content
+            logger.info(f"Client connected to server with id:{self.id}")
+            print(f"You are now online! Your ID: {self.id}")
 
         except Exception as error:
             logger.error(error)
@@ -73,9 +64,10 @@ class Client(threading.Thread):
 
                 if content.lower() == 'exit':
                     break
+
                 logger.debug("Sending message to server")
-                message = Message(self.user_id,content)
-                self.sock.sendall(message.to_bytes())
+                message = Message(self._host,self.id,content)
+                self.conn.sendall(message.encode())
         
         except Exception as error:
             logger.error(error)
@@ -86,13 +78,13 @@ class Client(threading.Thread):
 
         try:
             while True:
-                message_bytes = self.sock.recv(1024)
-                if not message_bytes:
+                raw_message = self.conn.recv(1024)
+                if not raw_message:
                     break
                 
                 logger.debug("Message recive from server")
-                message = create_message(message_bytes)
-                self.stdout_message(message)
+                message = Message.create(raw_message)
+                message.print()
                 
         except Exception as error:
             logger.error(error)
@@ -105,15 +97,13 @@ class Client(threading.Thread):
         logger.debug("Creating socket")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-
-            self.sock:socket.socket = sock
+            
+            self.conn, self.addr = sock
 
             logger.debug("Connecting to server...")
-            sock.connect((self._host, self._port))
+            sock.connect((self.server_host, self.server_port))
             logger.debug("Conection establisehd with server!")
 
-            print(initial_message)
-                        
             self._initial_connection()
 
             logger.debug("Thread for recieving messages")
@@ -130,7 +120,6 @@ class Client(threading.Thread):
 
 
 if __name__ == "__main__":
-    logger = configure_logging()
     client = Client()
 
     try:

@@ -2,67 +2,32 @@ import os
 import socket
 import json
 import threading
-import logging
 
-from dotenv import find_dotenv, load_dotenv
-from dataclasses import dataclass
+from config import logger
+from utils import Message
 
-path = find_dotenv()
-if path:
-    load_dotenv()
-
-
-def configure_logging():
-    # Logging manager configuration
-    logger = logging.getLogger("coliseum_client")
-    logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(f"coliseum_server.log")
-    formatter = logging.Formatter('%(asctime)s - %(name)s- %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    return logger
-
-@dataclass
-class Message:
-    sender: str
-    content: str
-
-    def encode(self):
-        return json.dumps(self.__dict__).encode("utf-8")
-
-
-def create_message(message: bytes):
-    """Factory pattern to create a message object"""
-    try:
-        data: dict = json.loads(message.decode("utf-8"))
-        sender = data.get("sender")
-        content = data.get("content")
-        return Message(sender=sender, content=content)
-    except json.JSONDecodeError:
-        # Handle JSON decoding errors
-        print("Error decoding JSON message")
-        return None
 
 
 class Server:
     def __init__(self):
         self._host = os.getenv("SERVER_HOST")
         self._port = int(os.getenv("SERVER_PORT"))
-        self.clients: list[ClientHandler] = []
+        
         self._lock = threading.Lock()
         self._client_counter = 0  # Counter for generating unique client IDs
 
+        self.clients: list[ClientHandler] = []
+
     
     def _send_reject_message(client_handler:'ClientHandler'):
-        logger.info("Send user id to client")
         try:
-            message = Message(sender="Server", content="Server full. Connection refused")
+            message = Message(sender="Server", status=500,content="server_full")
             client_handler.conn.sendall(message.encode())
         except Exception as error:
             logger.error(error)
             raise
         finally:
-            client_handler.disconnect()
+            client_handler.conn.close()
 
     def _get_len_clients(self):
         logger.debug("STACK: Get length from server.clients")
@@ -108,7 +73,6 @@ class Server:
         try:
             with self._lock:
                 self.clients.remove(client_handler)
-
         except Exception as error:
             logger.error(error)
             raise
@@ -180,10 +144,10 @@ class ClientHandler(threading.Thread):
         logger.info("Running new client")
         try:
             while True:
-                message_raw = self.conn.recv(1024)
-                if not message_raw:
+                raw_message = self.conn.recv(1024)
+                if not raw_message:
                     break
-                message = create_message(message_raw)
+                message = Message.create(raw_message)
                 if message:
                     self._broadcast(message)
 
@@ -193,6 +157,5 @@ class ClientHandler(threading.Thread):
 
 
 if __name__ == "__main__":
-    logger = configure_logging()
     server= Server()
     server.run()
