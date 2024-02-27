@@ -2,7 +2,7 @@ import os
 import socket
 import threading
 
-from utils import logger
+from utils import configure_logging
 from messages import Message
 
 
@@ -37,7 +37,6 @@ class Server:
             logger.error(error)
             raise
         
-
     def _append_client(self,client_handler):
         logger.debug("STACK: Append client to server.clients")
         try:
@@ -122,6 +121,9 @@ class ClientHandler(threading.Thread):
     def _broadcast(self, message: Message):
         logger.debug("STACK: Broadcasting message to server.clients")
 
+        if not message.sender_id:
+            return None
+
         with self.server._lock:
             for client in self.server.clients:
                 if client == self:
@@ -132,6 +134,8 @@ class ClientHandler(threading.Thread):
                     logger.error(error)
                     client.disconnect()
                     break
+
+        return None
     
     def disconnect(self):
         if not self.conn._closed:
@@ -146,6 +150,7 @@ class ClientHandler(threading.Thread):
                 if not raw_message:
                     break
                 message = Message.create(raw_message)
+
                 if message:
                     self._broadcast(message)
 
@@ -155,5 +160,7 @@ class ClientHandler(threading.Thread):
 
 
 if __name__ == "__main__":
+    
+    logger = configure_logging("server.log")
     server= Server()
     server.run()

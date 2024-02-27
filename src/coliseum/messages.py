@@ -1,5 +1,4 @@
 import json
-from utils import logger
 
 
 class Message:
@@ -13,11 +12,10 @@ class Message:
         try:
             return json.dumps(self.__dict__).encode("utf-8")
         except Exception as error:
-            logger.error(error)
             raise
 
     def print(self):
-        print(f"@{self.sender_id}:{self.content}")
+        print(f"{self.sender_id}:{self.content}")
 
     @staticmethod
     def create(raw:bytes):
@@ -29,7 +27,6 @@ class Message:
             content = data.get("content")
             return Message(sender_id=sender_id, status=status, content=content)
         except Exception as error:
-            logger.error(error)
             raise
     
     

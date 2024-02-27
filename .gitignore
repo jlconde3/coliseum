@@ -1,5 +1,6 @@
 # Folders
 .venv
+__pycache__
 
 # Files
 *.pyc
