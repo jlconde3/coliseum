@@ -72,6 +72,12 @@ class Server:
             logger.error(error)
             raise
 
+    def _remove_disconnected_clients(self):
+        """Remove disconnected clients from server.clients."""
+        with self._lock:
+            self.clients = [client for client in self.clients if not client.conn._closed]
+
+
     def remove_client(self, client_handler: 'ClientHandler'):
         """Remove a client from server.clients."""
         logger.debug("STACK: Remove client from server.clients")
@@ -165,7 +171,7 @@ class ClientHandler(threading.Thread):
         """Run the client handler."""
         logger.info("Running new client")
         try:
-            while True:
+            while not self._stop_event.is_set():
                 raw_message = self.conn.recv(1024)
 
                 if not raw_message:
