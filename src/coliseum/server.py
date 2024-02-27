@@ -129,28 +129,37 @@ class ClientHandler(threading.Thread):
         self.server = server
         self.id = id
 
+        self._stop_event = threading.Event()
+
     def _broadcast(self, message: Message):
         """Broadcast a message to server clients."""
         logger.debug("STACK: Broadcasting message to server.clients")
 
         with self.server._lock:
-            for client in self.server.clients:
+            connected_clients = [client for client in self.server.clients if not client.conn._closed]
+
+            for client in connected_clients:
                 if client == self:
                     continue
                 try:
                     client.conn.sendall(message.encode())
+                
                 except Exception as error:
                     logger.error(error)
-                    client.disconnect()
-                    break
 
         return None
+    
+    def stop(self):
+        self._stop_event.set()
 
     def disconnect(self):
         """Disconnect the client."""
-        if self.conn and not self.conn._closed:
+        if not self.conn._closed:
             self.conn.close()
+            self.stop()
             self.server.remove_client(self)
+            logger.warning("Client disconnected")
+        
 
     def run(self):
         """Run the client handler."""
@@ -167,6 +176,8 @@ class ClientHandler(threading.Thread):
 
         except Exception as error:
             logger.error(error)
+
+        finally:
             self.disconnect()
 
 
