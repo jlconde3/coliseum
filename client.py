@@ -3,22 +3,20 @@ import json
 import threading
 import uuid
 
-HOST = "127.0.0.1"
-PORT = 65432
 
 initial_message = r"""
-Welcome to FiveChan v.0.0.0.
+ 
+ ________  ________  ___       ___  ________  _______   ___  ___  _____ ______      
+|\   ____\|\   __  \|\  \     |\  \|\   ____\|\  ___ \ |\  \|\  \|\   _ \  _   \    
+\ \  \___|\ \  \|\  \ \  \    \ \  \ \  \___|\ \   __/|\ \  \\\  \ \  \\\__\ \  \   
+ \ \  \    \ \  \\\  \ \  \    \ \  \ \_____  \ \  \_|/_\ \  \\\  \ \  \\|__| \  \  
+  \ \  \____\ \  \\\  \ \  \____\ \  \|____|\  \ \  \_|\ \ \  \\\  \ \  \    \ \  \ 
+   \ \_______\ \_______\ \_______\ \__\____\_\  \ \_______\ \_______\ \__\    \ \__\
+    \|_______|\|_______|\|_______|\|__|\_________\|_______|\|_______|\|__|     \|__|
+                                      \|_________|                                  
 
- _             _ 
-\ \          / /
- \ \        / /
-  \ \      / /
-   \ \    / /
-    \ \  / /
-     \ \/ /
-      \  /
-       \/     
-     
+Welcome to Coliseum v.0.0.0.                                                                             
+                                                                                    
 Considerations:
 
     - This is a free chat, so feel free to express yourself.
@@ -33,14 +31,19 @@ Considerations:
 To start chatting, simply press Enter!
 
 """
+import socket
+import threading
+import json
 
+HOST = "127.0.0.1"
+PORT = 65432
+user_id = None
 
-
-def print_message(data:bytes):
-    message_recv:dict = json.loads(data.decode("utf-8"))
+def print_message(data: bytes):
+    message_recv: dict = json.loads(data.decode("utf-8"))
     print(f"{message_recv.get('ip')}@{message_recv.get('user')}:{message_recv.get('message')}")
 
-def receive_messages(sock:socket.socket):
+def receive_messages(sock: socket.socket):
     try:
         while True:
             data = sock.recv(1024)
@@ -53,8 +56,7 @@ def receive_messages(sock:socket.socket):
         print(f"Error receiving message: {e}")
         raise
 
-
-def send_message(sock:socket.socket):
+def send_message(sock: socket.socket):
     try:
         while True:
             message = input()
@@ -75,27 +77,33 @@ def send_message(sock:socket.socket):
         print(f"Error sending message: {e}")
         raise
 
-def initial_connection(sock:socket.socket):
+def initial_connection(sock: socket.socket):
+    global user_id
+    try:
+        message_dict = {
+            "ip": HOST,
+            "message": "new_connection"
+        }
 
-    message_dict = {
-        "ip": HOST,
-        "message": "new_connection"
-    }
+        message_json = json.dumps(message_dict).encode()
+        sock.sendall(message_json)
 
-    message_json = json.dumps(message_dict).encode()
-    sock.sendall(message_json)
+        # Receive the unique ID assigned by the server
+        response = sock.recv(1024)
+        user_id = json.loads(response.decode("utf-8")).get("content")
 
+        print(f"You are now online! Your ID: {user_id}")
+
+    except Exception as e:
+        print(f"Error during initial connection: {e}")
+        raise
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-
-    print(initial_message)
-    start = input()
-    user_id = str(uuid.uuid4())
-
+    print("Connecting to the server...")
+    
     s.connect((HOST, PORT))
 
-    print(f"You are now online! Your ID:{user_id}")
-
+    initial_connection(s)
 
     receive_thread = threading.Thread(target=receive_messages, args=(s,))
     receive_thread.start()
@@ -106,5 +114,3 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Wait for the send and receive threads to finish
     send_thread.join()
     receive_thread.join()
-
-print("Connection closed.")
