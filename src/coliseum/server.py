@@ -1,4 +1,5 @@
 import os
+import ssl
 import socket
 import threading
 
@@ -90,21 +91,25 @@ class Server:
 
     def run(self):
         """Run the server."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile="ca.pem",keyfile="key.pem")
+            sock = context.wrap_socket(sock=sock,server_side=True)
             try:
-                s.bind((self._host, self._port))
+                sock.bind((self._host, self._port))
             except OSError as error:
                 logger.error(f"Failed to bind: {error}")
                 raise
 
-            s.listen()
+            sock.listen()
 
             logger.info(f"Server listening on: {self._host}:{self._port}")
             print(f"Server listening on {self._host}:{self._port}")
 
             try:
                 while True:
-                    conn, addr = s.accept()
+                    conn, addr = sock.accept()
 
                     logger.info(f"New connection from: {addr[0]}:{addr[1]}")
                     print(f"New connection from: {addr[0]}:{addr[1]}")

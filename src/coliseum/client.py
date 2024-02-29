@@ -1,5 +1,6 @@
 
 import os
+import ssl
 import socket
 import threading
 
@@ -90,10 +91,13 @@ class Client(threading.Thread):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 
-                self.sock = sock
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                context.load_cert_chain(certfile="ca.pem")
+
+                self.sock = context.wrap_socket(sock=sock,server_hostname=self.server_host)
 
                 logger.debug("Connecting to server...")
-                sock.connect((self.server_host, self.server_port))
+                self.sock.connect((self.server_host, self.server_port))
                 logger.debug("Conection establisehd with server!")
 
                 self._initial_connection()
