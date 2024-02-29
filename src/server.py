@@ -94,7 +94,8 @@ class Server:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-            context.load_cert_chain(certfile="ca.pem",keyfile="key.pem")
+            context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\key.pem")
+
             sock = context.wrap_socket(sock=sock,server_side=True)
             try:
                 sock.bind((self._host, self._port))

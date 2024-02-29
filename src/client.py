@@ -92,14 +92,14 @@ class Client(threading.Thread):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-                context.load_cert_chain(certfile="ca.pem")
+                context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\key.pem")
 
-                self.sock = context.wrap_socket(sock=sock,server_hostname=self.server_host)
+                self.sock = context.wrap_socket(sock=sock, server_hostname=self.server_host)
 
                 logger.debug("Connecting to server...")
                 self.sock.connect((self.server_host, self.server_port))
                 logger.debug("Conection establisehd with server!")
-
+                
                 self._initial_connection()
 
                 logger.debug("Thread for recieving messages")
@@ -113,7 +113,8 @@ class Client(threading.Thread):
                 # Wait for the send and receive threads to finish
                 send_thread.join()
                 receive_thread.join()
-        except:
+        except Exception as error:
+            print(error)
             pass
 
 if __name__ == "__main__":
