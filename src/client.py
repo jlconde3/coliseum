@@ -92,9 +92,10 @@ class Client(threading.Thread):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-                context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\key.pem")
+                # Server authentication
+                context.load_verify_locations(cafile=r".\certs\ca.pem")
 
-                self.sock = context.wrap_socket(sock=sock, server_hostname=self.server_host)
+                self.sock = context.wrap_socket(sock=sock, server_hostname="COLISEUM")
 
                 logger.debug("Connecting to server...")
                 self.sock.connect((self.server_host, self.server_port))
