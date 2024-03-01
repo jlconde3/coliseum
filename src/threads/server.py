@@ -17,6 +17,7 @@ from utils import (
     configure_logging, 
 )
 
+logger = configure_logging("thread-server.log")
 
 class Server:
     """Class representing a simple server."""
@@ -49,7 +50,7 @@ class Server:
         logger.debug("STACK: Get length from server.clients")
         try:
             with self._lock:
-                len_clients = len(self.clients)
+                len_clients = len([client for client in self.clients if not client.conn._closed])
             return len_clients
         except Exception as error:
             logger.error(error)
@@ -109,31 +110,32 @@ class Server:
                 # Startinf server and listening for new connections
                 sock.bind((self._server_ip, self._server_port))
                 sock.listen()
-
                 logger.info(f"Server listening on: {self._server_ip}:{self._server_port}")
                 print(f"Server listening on {self._server_ip}:{self._server_port}")
 
                 while True:
-
                     conn, addr = sock.accept()
-
+                    self._handle_client(conn, addr)
                     logger.info(f"New connection from: {addr[0]}:{addr[1]}")
                     print(f"New connection from: {addr[0]}:{addr[1]}")
 
-                    if self._get_len_clients() < 3:
-                        client_handler = ClientHandler(conn, addr, self)
-                        client_handler.id = self._get_next_client_id()
-                        self._append_client(client_handler)
-                        self._broadcast_user_id(client_handler)
-                        client_handler.start()
-                    else:
-                        logger.warning("Reject connection to client. Server is full")
-                        Server._send_reject_message(conn)
         
         except Exception as error:
             logger.error(error)
             raise
 
+    def _handle_client(self, conn:socket.socket, addr:socket._Address):
+        """Method use for handling the number of clients connected to the server"""
+
+        if self._get_len_clients() < 3:
+            client_handler = ClientHandler(conn, addr, self)
+            client_handler.id = self._get_next_client_id()
+            self._append_client(client_handler)
+            self._broadcast_user_id(client_handler)
+            client_handler.start()
+        else:
+            logger.warning("Reject connection to client. Server is full")
+            Server._send_reject_message(conn)
 
 class ClientHandler(threading.Thread):
     """Class representing a client handler thread."""
@@ -184,25 +186,19 @@ class ClientHandler(threading.Thread):
         try:
             while not self._stop_event.is_set():
                 raw_message = self.conn.recv(1024)
-
                 if not raw_message:
                     break
-
                 message = Message.create(raw_message)
                 self._broadcast(message)
-
         except Exception as error:
             logger.error(error)
             raise
-
         finally:
             self.disconnect()
 
 
 
 if __name__ == "__main__":
-    
-    logger = configure_logging("server.log")
     try:
         server= Server()
         server.run()

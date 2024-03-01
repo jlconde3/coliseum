@@ -16,6 +16,8 @@ from utils import (
     configure_logging, 
 )
 
+logger = configure_logging("thread-client.log")
+
 
 class Client(threading.Thread):
 
@@ -131,8 +133,6 @@ class Client(threading.Thread):
             raise
 
 if __name__ == "__main__":
-    
-    logger = configure_logging("client.log")
     client = Client()
     try:
         client.run()
