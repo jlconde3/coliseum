@@ -3,9 +3,7 @@ import ssl
 import socket
 import threading
 
-from utils import configure_logging
-from messages import Message
-
+from utils import configure_logging, Message
 
 class Server:
     """Class representing a simple server."""
