@@ -60,7 +60,6 @@ class Server:
 
     async def _broadcast_user_id(self, client_handler: 'ClientHandler'):
         """Broadcast user ID to the client."""
-        logger.info("Sending user id to client")
         try:
             message = Message(sender_id="Server", content=client_handler.id)
             await client_handler.send_message(message)
@@ -107,10 +106,12 @@ class Server:
             client_handler.id = self._get_next_client_id()
             self._append_client(client_handler)
             await self._broadcast_user_id(client_handler)
+            logger.info(f"New client added to server:{addr[0]}:{addr[1]}")
             await client_handler.run()
+
         else:
-            logger.warning("Reject connection to client. Server is full")
             await self._send_reject_message(writer)
+            logger.warning(f"Client rejected from server:{addr[0]}:{addr[1]}")
 
 
 class ClientHandler:
@@ -138,28 +139,29 @@ class ClientHandler:
 
     async def run(self):
         """Run the client handler."""
-        logger.info("New client added to server:")
         try:
             while not self.is_closed():
                 raw_message = await self.reader.read(1024)
                 if not raw_message:
                     break
                 message = Message.create(raw_message)
+                logger.debug(f"Message recived from:{self.id}")
                 await self._broadcast(message)
         except Exception as error:
             logger.error(error)
             raise
         finally:
             self.disconnect()
+            logger.warning(f"Client disconnected:{self.id}")
 
     async def _broadcast(self, message: Message):
         """Broadcast a message to server clients.
         Check for the clients who are still connected to the server."""
         connected_clients = [client for client in self.server.clients if not client.is_closed()]
-
         for client in connected_clients:
-            if client != self:
+            if client != self and message.status == 200:
                 await client.send_message(message)
+                logger.debug(f"Message sended to:{client.id}")
 
     def disconnect(self):
         """Disconnect the client."""

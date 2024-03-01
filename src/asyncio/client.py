@@ -26,14 +26,7 @@ class Client:
         self.id = None
 
     async def _initial_connection(self, reader:asyncio.StreamReader, writer:asyncio.StreamWriter):
-        logger.debug("Initial connection to server")
         try:
-            # Envio del mensaje de conexión
-            message = Message(sender_id=None, status=201, content="new_user")
-            writer.write(message.encode())
-            await writer.drain()
-            logger.debug("Initial connection message send to server")
-
             # Respuesta del servidor indicando el nombre de usuario
             raw_message = await reader.read(1024)
             message = Message.create(raw_message)
@@ -45,8 +38,6 @@ class Client:
                 logger.warning("Connection Refused")
                 raise ConnectionRefusedError()
 
-            # Si el status es correcto implica que ha accedido
-            # al sistema y el contenido es el ID del cliente
             self.id = message.content
             logger.info(f"Client connected to server with id: {self.id}")
             print(f"You are now online! Your ID: {self.id}")
@@ -61,52 +52,45 @@ class Client:
                 content = input()
                 if content.lower() == 'exit':
                     break
-                logger.debug("Sending message to server")
                 message = Message(sender_id=self.id, content=content)
                 writer.write(message.encode())
                 await writer.drain()
+                logger.debug("Message sended to server")
+                
         except Exception as error:
             logger.error(error)
             raise
-        finally:
-            writer.close()
 
-    async def _receive_message(self, reader):
+    async def _receive_message(self, reader:asyncio.StreamReader):
         try:
             while True:
+                print("Hola")
                 raw_message = await reader.read(1024)
                 if not raw_message:
                     break
-
                 logger.debug("Message received from server")
                 message = Message.create(raw_message)
                 message.print()
-
         except Exception as error:
             logger.error(error)
             raise
 
     async def run(self):
-        logger.debug("Creating connection to server")
 
         try:
             context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=CA_FILE_PATH)
 
-            _, ssl_transport, = await asyncio.open_connection(
+            reader, writer =  await asyncio.open_connection(
                 host=self._server_ip,
                 port=self._server_port,
                 ssl=context,
                 server_hostname=self._server_hostname,
             )
-
-            reader, writer = ssl_transport
-
             await self._initial_connection(reader, writer)
 
-            logger.debug("Creating tasks for receiving and sending messages")
             receive_task = asyncio.create_task(self._receive_message(reader))
             send_task = asyncio.create_task(self._send_message(writer))
-
+            logger.debug("Creating tasks for receiving and sending messages")
             await asyncio.gather(receive_task, send_task)
 
         except Exception as error:

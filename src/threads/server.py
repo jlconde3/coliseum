@@ -124,7 +124,7 @@ class Server:
             logger.error(error)
             raise
 
-    def _handle_client(self, conn:socket.socket, addr:socket._Address):
+    def _handle_client(self, conn:socket.socket, addr):
         """Method use for handling the number of clients connected to the server"""
 
         if self._get_len_clients() < 3:

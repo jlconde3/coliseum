@@ -43,6 +43,7 @@ class Message:
         try:
             return json.dumps(self.__dict__).encode("utf-8")
         except Exception as error:
+            print(error)
             raise
 
     def print(self):
@@ -59,5 +60,6 @@ class Message:
             content = data.get("content")
             return Message(sender_id=sender_id, status=status, content=content)
         except Exception as error:
+            print(error)
             raise
     
