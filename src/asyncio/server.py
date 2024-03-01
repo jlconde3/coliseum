@@ -157,8 +157,7 @@ class ClientHandler:
     async def _broadcast(self, message: Message):
         """Broadcast a message to server clients.
         Check for the clients who are still connected to the server."""
-        connected_clients = [client for client in self.server.clients if not client.is_closed()]
-        for client in connected_clients:
+        for client in self.server.clients:
             if client != self and message.status == 200:
                 await client.send_message(message)
                 logger.debug(f"Message sended to:{client.id}")
