@@ -3,17 +3,19 @@ import ssl
 import socket
 import threading
 
-from utils import configure_logging, Message
+from utils import configure_logging, Message,SERVER_IP,SERVER_HOSTNAME,  SERVER_PORT
 
 class Server:
     """Class representing a simple server."""
 
     def __init__(self):
         """Initialize the server."""
-        self._host = os.getenv("SERVER_HOST")
-        self._port = int(os.getenv("SERVER_PORT"))
+        self._server_ip = SERVER_IP
+        self._server_hostname =  SERVER_HOSTNAME
+        self._server_port = SERVER_PORT
 
-        self._lock = threading.Lock()
+        # Object use for controlling the acceso of the differents threads to share resource like server.clients list.
+        self._lock = threading.Lock() 
         self._client_counter = 0  # Counter for generating unique client IDs
         self.clients: list[ClientHandler] = []
 
@@ -34,7 +36,7 @@ class Server:
         logger.debug("STACK: Get length from server.clients")
         try:
             with self._lock:
-                len_clients = len(self.clients)  # Use len() function to get the length
+                len_clients = len(self.clients)
             return len_clients
         except Exception as error:
             logger.error(error)
@@ -71,12 +73,6 @@ class Server:
             logger.error(error)
             raise
 
-    def _remove_disconnected_clients(self):
-        """Remove disconnected clients from server.clients."""
-        with self._lock:
-            self.clients = [client for client in self.clients if not client.conn._closed]
-
-
     def remove_client(self, client_handler: 'ClientHandler'):
         """Remove a client from server.clients."""
         logger.debug("STACK: Remove client from server.clients")
@@ -89,26 +85,23 @@ class Server:
 
     def run(self):
         """Run the server."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-            # Client authentication
-            context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\ca.key")
-            sock = context.wrap_socket(sock=sock,server_side=True)
-            
-            try:
-                sock.bind((self._host, self._port))
-        
-            except Exception as error:
-                logger.error(error)
+                # Server implements SSL/TLS Protocol for encrypting and client authentication
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\ca.key")
+                sock = context.wrap_socket(sock=sock,server_side=True)
+                
+                # Startinf server and listening for new connections
+                sock.bind((self._server_ip, self._server_port))
+                sock.listen()
 
-            sock.listen()
+                logger.info(f"Server listening on: {self._server_ip}:{self._server_port}")
+                print(f"Server listening on {self._server_ip}:{self._server_port}")
 
-            logger.info(f"Server listening on: {self._host}:{self._port}")
-            print(f"Server listening on {self._host}:{self._port}")
-
-            try:
                 while True:
+
                     conn, addr = sock.accept()
 
                     logger.info(f"New connection from: {addr[0]}:{addr[1]}")
@@ -123,55 +116,55 @@ class Server:
                     else:
                         logger.warning("Reject connection to client. Server is full")
                         Server._send_reject_message(conn)
-
-            except KeyboardInterrupt:
-                logger.info("Server shutting down.")
-                print("Server shutting down.")
+        
+        except Exception as error:
+            logger.error(error)
+            raise
 
 
 class ClientHandler(threading.Thread):
     """Class representing a client handler thread."""
 
     def __init__(self, conn: socket.socket, addr, server: Server, id: int = None):
-        """Initialize the client handler."""
+        """Initialize the client handler. For each new client a new Thread 
+        is started inside the process where the server class is running."""
         super().__init__()
         self.conn = conn
         self.addr = addr
         self.server = server
         self.id = id
-
-        self._stop_event = threading.Event()
+       
+        self._stop_event = threading.Event() # Use for stopping the thread when the connection with the client is lost or close
 
     def _broadcast(self, message: Message):
         """Broadcast a message to server clients."""
         logger.debug("STACK: Broadcasting message to server.clients")
 
         with self.server._lock:
+            """Check for the clients who still connected to the server"""
             connected_clients = [client for client in self.server.clients if not client.conn._closed]
 
             for client in connected_clients:
-                if client == self:
-                    continue
-                try:
-                    client.conn.sendall(message.encode())
-                
-                except Exception as error:
-                    logger.error(error)
+                if client != self:
+                    try:
+                        client.conn.sendall(message.encode())
+                    except Exception as error:
+                        logger.error(error)
+                        raise
 
-        return None
-    
     def stop(self):
+        """Trigger the event for stopping the thread"""
         self._stop_event.set()
 
     def disconnect(self):
         """Disconnect the client."""
-        if not self.conn._closed:
+        if not self.conn._closed: # Check if the client still connected for closing the connection.
             self.conn.close()
-            self.stop()
-            self.server.remove_client(self)
-            logger.warning("Client disconnected")
+            
+        self.stop()
+        self.server.remove_client(self)
+        logger.warning("Client disconnected")
         
-
     def run(self):
         """Run the client handler."""
         logger.info("Running new client")
@@ -187,6 +180,7 @@ class ClientHandler(threading.Thread):
 
         except Exception as error:
             logger.error(error)
+            raise
 
         finally:
             self.disconnect()

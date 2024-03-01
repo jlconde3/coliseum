@@ -2,11 +2,11 @@
 import json
 import logging 
 
-from dotenv import find_dotenv, load_dotenv
 
-path = find_dotenv()
-if path:
-    load_dotenv()
+# Constantes empleadas en el uso del servicio
+SERVER_IP = ""
+SERVER_PORT = ""
+SERVER_HOSTNAME = ""
 
 
 def configure_logging(file_log):

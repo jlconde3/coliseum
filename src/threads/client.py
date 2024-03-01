@@ -91,6 +91,7 @@ class Client(threading.Thread):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
                 # Server authentication
                 context.load_verify_locations(cafile=r".\certs\ca.pem")
 
@@ -113,9 +114,10 @@ class Client(threading.Thread):
                 # Wait for the send and receive threads to finish
                 send_thread.join()
                 receive_thread.join()
+
         except Exception as error:
-            print(error)
-            pass
+            logger.error(error)
+            raise
 
 if __name__ == "__main__":
     
