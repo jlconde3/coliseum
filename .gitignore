@@ -9,3 +9,5 @@ __pycache__
 *.pem
 src/certs/ca.key
 test.ipynb
+src/certs/private_key.key
+src/certs/certificate.csr

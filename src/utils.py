@@ -9,7 +9,7 @@ SERVER_PORT = 5001
 SERVER_HOSTNAME = "COLISEUM"
 
 CA_FILE_PATH = os.path.join(os.getcwd(), "certs","ca.pem")
-KEY_FILE_PATH = os.path.join(os.getcwd(), "certs","ca.key")
+KEY_FILE_PATH = os.path.join(os.getcwd(), "certs","private_key.key")
 
 def configure_logging(file_log_name:str)->logging.Logger:
     """Returns a Logger object with custom attibutes for the service"""
