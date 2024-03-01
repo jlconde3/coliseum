@@ -196,5 +196,8 @@ class ClientHandler(threading.Thread):
 if __name__ == "__main__":
     
     logger = configure_logging("server.log")
-    server= Server()
-    server.run()
+    try:
+        server= Server()
+        server.run()
+    except KeyboardInterrupt:
+        print("Server terminated by user.")
