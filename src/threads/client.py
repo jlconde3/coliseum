@@ -4,16 +4,17 @@ import ssl
 import socket
 import threading
 
-from utils import configure_logging, Message
+from utils import configure_logging, Message, SERVER_IP, SERVER_PORT, SERVER_HOSTNAME
 
 
 class Client(threading.Thread):
 
     def __init__(self):
-
+        self._server_ip = SERVER_IP
+        self._server_hostname = SERVER_HOSTNAME
+        self._server_port = SERVER_PORT
+        
         self.sock: socket.socket = None
-        self.server_host = os.getenv("SERVER_HOST")
-        self.server_port = int(os.getenv("SERVER_PORT"))
         self.id:str = None
     
 
@@ -84,7 +85,6 @@ class Client(threading.Thread):
 
     def run(self):
 
-
         logger.debug("Creating socket")
 
         try:
@@ -95,10 +95,10 @@ class Client(threading.Thread):
                 # Server authentication
                 context.load_verify_locations(cafile=r".\certs\ca.pem")
 
-                self.sock = context.wrap_socket(sock=sock, server_hostname="COLISEUM")
+                self.sock = context.wrap_socket(sock=sock, server_hostname=self._server_hostname)
 
                 logger.debug("Connecting to server...")
-                self.sock.connect((self.server_host, self.server_port))
+                self.sock.connect((self._server_ip, self._server_port))
                 logger.debug("Conection establisehd with server!")
                 
                 self._initial_connection()

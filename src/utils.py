@@ -1,4 +1,4 @@
-
+import os
 import json
 import logging 
 
@@ -9,11 +9,20 @@ SERVER_PORT = ""
 SERVER_HOSTNAME = ""
 
 
-def configure_logging(file_log):
+def configure_logging(file_log_name):
+
+    # Defininig the logger folder
+    os.getcwd()
+    os.chdir("..")
+    path = os.getcwd()
+    path_logs = os.path.join(path,"logs")
+    if not os.path.exists(path_logs):    
+        os.mkdir(path_logs)
+
     # Logging manager configuration
     logger = logging.getLogger("coliseum")
     logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(file_log)
+    fh = logging.FileHandler(os.path.join(path_logs,file_log_name))
     formatter = logging.Formatter('%(asctime)s - %(name)s- %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
