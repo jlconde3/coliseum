@@ -67,6 +67,8 @@ class Client:
         try:
             while True:
                 raw_message = await self.reader.read(1024)
+                if not raw_message:
+                    break
                 logger.debug("Message received from server")
                 message = Message.create(raw_message)
                 message.print()
