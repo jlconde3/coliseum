@@ -180,7 +180,7 @@ class ClientHandler(threading.Thread):
         
     def run(self):
         """Run the client handler."""
-        logger.info("Running new client")
+        logger.info("New client added to server:")
         try:
             while not self._stop_event.is_set():
                 raw_message = self.conn.recv(1024)

@@ -36,7 +36,7 @@ class Client(threading.Thread):
             # Envio del mensaje de conexión
             message = Message(sender_id=None,status=201,content="new_user")
             self.sock.sendall(message.encode())
-            logger.debug("Connection Message send to server")
+            logger.debug("Initial connection meesage send to server")
 
             # Respuesta del servidor indicando el nombre de usuario
             raw_message = self.sock.recv(1024)
@@ -63,17 +63,18 @@ class Client(threading.Thread):
         try:
             while True:
                 content = input()
-
                 if content.lower() == 'exit':
                     break
-
                 logger.debug("Sending message to server")
                 message = Message(sender_id = self.id,content=content)
                 self.sock.sendall(message.encode())
-        
+                
         except Exception as error:
             logger.error(error)
             raise
+
+        finally:
+            self.sock.close()
 
 
     def _recive_message(self):
@@ -113,11 +114,11 @@ class Client(threading.Thread):
                 
                 self._initial_connection()
 
-                logger.debug("Thread for recieving messages")
+                logger.debug("Creatng thread for recieving messages")
                 receive_thread = threading.Thread(target=self._recive_message)
                 receive_thread.start()
 
-                logger.debug("Thread for sending messages")
+                logger.debug("Creating thread for sending messages")
                 send_thread = threading.Thread(target=self._send_message)
                 send_thread.start()
 

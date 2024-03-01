@@ -23,15 +23,13 @@ def configure_logging(file_log_name:str)->logging.Logger:
         os.mkdir(path_logs)
 
     # Logging manager configuration
-    logger = logging.getLogger("coliseum")
+    logger = logging.getLogger("COLISEUM")
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(os.path.join(path_logs,file_log_name))
-    formatter = logging.Formatter('%(asctime)s - %(name)s- %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     return logger
-
-logger = configure_logging("messages.log")
 
 class Message:
     """Class use for manipulating messages between server and clients and viceversa"""
@@ -45,7 +43,6 @@ class Message:
         try:
             return json.dumps(self.__dict__).encode("utf-8")
         except Exception as error:
-            logger.error(error)
             raise
 
     def print(self):
@@ -62,6 +59,5 @@ class Message:
             content = data.get("content")
             return Message(sender_id=sender_id, status=status, content=content)
         except Exception as error:
-            logger.error(error)
             raise
     
