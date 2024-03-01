@@ -1,9 +1,22 @@
 import os
+import sys
 import ssl
 import socket
 import threading
 
-from utils import configure_logging, Message,SERVER_IP,SERVER_HOSTNAME,  SERVER_PORT
+# Adding module to python path
+sys.path.append(os.getcwd())
+
+from utils import (
+    SERVER_IP,
+    SERVER_HOSTNAME,
+    SERVER_PORT,
+    CA_FILE_PATH,
+    KEY_FILE_PATH,
+    Message,
+    configure_logging, 
+)
+
 
 class Server:
     """Class representing a simple server."""
@@ -90,7 +103,7 @@ class Server:
 
                 # Server implements SSL/TLS Protocol for encrypting and client authentication
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                context.load_cert_chain(certfile=r".\certs\ca.pem", keyfile=r".\certs\ca.key")
+                context.load_cert_chain(certfile=CA_FILE_PATH, keyfile=KEY_FILE_PATH)
                 sock = context.wrap_socket(sock=sock,server_side=True)
                 
                 # Startinf server and listening for new connections

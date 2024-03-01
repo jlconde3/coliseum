@@ -1,10 +1,20 @@
-
 import os
+import sys
 import ssl
 import socket
 import threading
 
-from utils import configure_logging, Message, SERVER_IP, SERVER_PORT, SERVER_HOSTNAME
+# Adding module to python path
+sys.path.append(os.getcwd())
+
+from utils import (
+    SERVER_IP,
+    SERVER_HOSTNAME,
+    SERVER_PORT,
+    CA_FILE_PATH,
+    Message,
+    configure_logging, 
+)
 
 
 class Client(threading.Thread):
@@ -93,7 +103,7 @@ class Client(threading.Thread):
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
                 # Server authentication
-                context.load_verify_locations(cafile=r".\certs\ca.pem")
+                context.load_verify_locations(cafile=CA_FILE_PATH)
 
                 self.sock = context.wrap_socket(sock=sock, server_hostname=self._server_hostname)
 
