@@ -74,14 +74,15 @@ class Server:
     async def run(self):
         """Run the server."""
         try:
-            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            ssl_context.load_cert_chain(certfile=CA_FILE_PATH, keyfile=KEY_FILE_PATH)
+            # SSL/TLS Client authentication disabled in DEBUG Mode
+            #ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            #ssl_context.load_cert_chain(certfile=CA_FILE_PATH, keyfile=KEY_FILE_PATH)
 
             server = await asyncio.start_server(
                 self._handle_client,
                 self._server_ip,
                 self._server_port,
-                ssl=ssl_context,
+                #ssl=ssl_context,
             )
 
             async with server:
@@ -117,7 +118,7 @@ class Server:
 class ClientHandler:
     """Class representing a client handler."""
 
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: Server, id: int = None):
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: Server, id: int = 0):
         """Initialize the client handler."""
         self.reader = reader
         self.writer = writer
@@ -177,3 +178,18 @@ if __name__ == "__main__":
         asyncio.run(server.run())
     except KeyboardInterrupt:
         print("Server terminated by user.")
+
+"""
+Implementaciones futuras:
+    - Interfáz grafica en el cliente.
+    - Indicar el número de usuarios en línea en el momento.
+    - Almacenar los mensajes en una base de datos.
+    - Mostrar en pantalla los mensajes enviados en la última hora.
+    - Mejorar o abstraer en el cliente la desconexión de la salida.
+    - No permitir la conexión desda la misma IP/Puerto.
+    - Implantar un sistema async en el cliente.
+    - Permitir al usuario asginarse un "nickname" aunque el ID lo proporcione el servidor.
+    - Asignar un color único a cada usuario conectado.
+    - Mejorar los logs.
+
+"""

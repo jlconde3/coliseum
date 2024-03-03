@@ -1,5 +1,8 @@
 import tkinter as tk
 
+from utils import Message
+from .client import Client
+
 COLISEUM_LOGO = r"""
  ________  ________  ___       ___  ________  _______   ___  ___  _____ ______
 |\   ____\|\   __  \|\  \     |\  \|\   ____\|\  ___ \ |\  \|\  \|\   _ \  _   \
@@ -11,9 +14,11 @@ COLISEUM_LOGO = r"""
                                       \|_________|
 """
 
-class TerminalApp:
-    def __init__(self, root):
+
+class ClientGUI:
+    def __init__(self, root, client:Client):
         self.root = root
+        self.client = client
         self.root.title("Terminal App")
         self.root.configure(bg="black")
 
@@ -46,19 +51,25 @@ class TerminalApp:
         # Obtiene el texto de la entrada
         input_text = self.input_entry.get()
 
+        message = Message(
+            sender_id="",
+            content=input_text,
+        )
+
         # Limpia la entrada después de presionar Enter
         self.input_entry.delete(0, tk.END)
         self.input_entry.insert(tk.END, ">>> ")
 
-        # Muestra el mensaje en la zona de visualización
         self.text_widget.config(state=tk.NORMAL)
-        self.text_widget.insert(tk.END, f"{input_text}\n")
+        self.text_widget.insert(tk.END, f"{message.created_time}/{message.sender_id}:{message.content}")
         self.text_widget.config(state=tk.DISABLED)
 
         # Desplaza automáticamente hacia abajo para mostrar el mensaje más reciente
         self.text_widget.yview(tk.END)
 
+
+
 if __name__ == "__main__":
     root = tk.Tk()
-    app = TerminalApp(root)
+    app = ClientGUI(root)
     root.mainloop()
