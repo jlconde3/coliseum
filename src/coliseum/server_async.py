@@ -141,7 +141,7 @@ class ClientHandler:
     async def run(self):
         """Run the client handler."""
         try:
-            while not self.is_closed():
+            while True:
                 raw_message = await self.reader.read(1024)
                 if not raw_message:
                     break

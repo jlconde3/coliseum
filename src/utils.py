@@ -39,7 +39,6 @@ class Message:
         self.sender_id:str = sender_id
         self.status:int = status
         self.content:str = content
-        self.created_time:datetime = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     def encode(self):
         try:
