@@ -54,7 +54,7 @@ class Client:
     async def send_message(self):
         """Send a message to the server"""
         
-        input_text = input(">>> ") # El problema es que el INPUT
+        input_text = input(">>> ") # El problema es que el INPUT bloque la visualziación
         message = Message(content=input_text)
         self.writer.write(message.encode())
         await self.writer.drain()
