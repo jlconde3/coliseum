@@ -4,8 +4,10 @@ use std::{
     collections::HashSet,
     sync::{Arc,RwLock},
     time::{SystemTime, UNIX_EPOCH},
+    net::IpAddr
 };
 use uuid::Uuid;
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Item {
@@ -32,8 +34,6 @@ impl Node {
     async fn register_node_in_entrypoint(&mut self) {
 
         let mut register_node_endpoint = self.register_node.to_string();
-        register_node_endpoint.push_str(":");
-        register_node_endpoint.push_str(&self.port.to_string());
         register_node_endpoint.push_str("/register/node");
 
         let client = Client::new();
@@ -137,6 +137,40 @@ impl Node {
     }
 }
 
-fn main(){
+#[macro_use]
+extern crate rocket;
 
+
+#[post("/register")]
+fn register (client_ip:IpAddr, node:&rocket::State<Node>)-> String{    
+    let new_node_url = rocket::request::FromRequest::from_request;
+    
+    client_ip().unwrap().to_string();
+    node.nodes.write().unwrap().insert(new_node_url);
+    node.handle_new_node(new_node_url);
+    let response = RegisterNodeResponse{message:"success".to_string(),nodes:node.nodes.read().unwrap()};
+    serde_json::to_string(&response)
+}
+
+#[launch]
+fn rocket() -> _ {
+    
+    let port = 5000;
+
+    let mut node = Node{
+        host:"https://127.0.0.1".to_string(),
+        port: port,
+        register_node: "https://127.0.0.1:5000".to_string(),
+        nodes: Arc::new(RwLock::new(HashSet::new())),
+        storage: Arc::new(RwLock::new(Vec::new())),
+    };
+
+    if port != 5000 {
+        node.register_node_in_entrypoint();
+    }
+
+    rocket::build()
+        .configure(rocket::Config::figment().merge(("port", &port)))
+        .manage(node)
+        .mount("/", routes![register])        
 }
