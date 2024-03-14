@@ -1,6 +1,8 @@
 # Folders
 .venv
+.vscode
 __pycache__
+coliseum-chain/target
 
 # Files
 *.pyc
@@ -11,3 +13,4 @@ src/certs/ca.key
 test.ipynb
 src/certs/private_key.key
 src/certs/certificate.csr
+*.lock
