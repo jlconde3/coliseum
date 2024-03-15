@@ -14,7 +14,7 @@ use node::Node;
 #[tokio::main]
 async fn main(){
 
-    let port = 5001;    
+    let port = 5000;    
 
     let mut addr = "127.0.0.1:".to_string();
     addr.push_str(&port.to_string());
