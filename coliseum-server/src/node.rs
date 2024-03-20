@@ -1,12 +1,12 @@
+use reqwest::header::DATE;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
+    time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
-};
+use tokio::{io::AsyncWriteExt, net::TcpStream};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Item {
@@ -26,6 +26,8 @@ pub struct Node {
 pub enum Action {
     REGISTER,
     SUCCESS,
+    CREATE,
+    RETRIEVE
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -35,29 +37,40 @@ pub struct Request {
 }
 
 impl Node {
-    pub async fn register_node(&mut self) {
-        // Conexión al nodo de registro
-        let mut stream = TcpStream::connect(self.register_addr.clone())
-            .await
-            .unwrap();
 
-        // Enviamos la petición al nodo de registro y esperamos la respuesta
-        let res = make_request(&mut stream, Action::REGISTER, self.addr.clone()).await;
+    pub fn create_item(&mut self, content: String) -> Item {
+        let item = Item {
+            id: Uuid::new_v4().to_string().replace("-", ""),
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64(),
+            content: content,
+        };
 
-        // Extraemos los nodos incluido en el campo data de la respuesta del servidor
-        let nodes: Vec<String> = serde_json::from_str(&res.data).unwrap();
-        for node in nodes {
-            self.nodes.write().unwrap().insert(node);
-        }
+        self.storage.write().unwrap().push(item.clone());
+        item
     }
 
-    pub async fn handle_connection(&mut self, socket: &mut TcpStream, request: String) {
+    pub fn retrieve_item(&self, id: String) -> Option<Item> {
+        // Recupera un item concreto a partir de su ID.
+
+        let items = self.storage.read().unwrap();
+        for item in items.iter() {
+            if item.id == id {
+                return Some(item.clone());
+            }
+        }
+        None // Item not found
+    }
+    
+    pub async fn handle_client_connection(&mut self, socket: &mut TcpStream, request: String) {
         // Procesamiento de la petición desde  un nodo
         let request: Request = serde_json::from_str(&request).unwrap();
 
         match request.action {
             Action::REGISTER => {
-                // Un nuevo nodo se registra en el nodo y envía la lista de nodos.
+                // Un nuevo nodo/cliente se registra en el nodo y envía la lista de nodos.
                 self.nodes.write().unwrap().insert(request.data.clone()); // Se añade el nuevo nodo.
                 let nodes = self.nodes.read().unwrap().clone();
                 make_response(
@@ -65,34 +78,40 @@ impl Node {
                     Action::SUCCESS,
                     serde_json::to_string(&nodes).unwrap(),
                 )
-                .await; //algo
+                .await;
             }
+            
+            Action::CREATE => {
+                // Crea un nuevo item
+                let content = request.data.clone();
+                let item = self.create_item(content);
+
+                make_response(
+                    socket,
+                    Action::SUCCESS,
+                    serde_json::to_string(&item).unwrap(),
+                )
+                .await;
+            }
+
+            Action::RETRIEVE => {
+                // Recupera un Item concreto.
+                let id = request.data.clone();
+                let item = self.retrieve_item(id);
+
+                make_response(
+                    socket,
+                    Action::SUCCESS,
+                    serde_json::to_string(&item).unwrap(),
+                )
+                .await;
+            }
+
             Action::SUCCESS => {
-                //Ornitorrincos
+                //Algo
             }
         }
     }
-}
-
-async fn make_request(stream: &mut TcpStream, action: Action, data: String) -> Request {
-    // Preparación de la petición al nodo
-    let req = Request {
-        action: action,
-        data: data,
-    };
-    let json = serde_json::to_string(&req).unwrap().into_bytes();
-
-    // Envio del mensaje al nodo
-    stream.write_all(&json).await.unwrap();
-
-    // Esperamos la respuesta del nodo
-    let mut buf = [0; 1024];
-    let n = stream.read(&mut buf).await.unwrap();
-
-    // Procesameos la respuesta del nodo
-    let string = String::from_utf8(buf[..n].to_vec()).unwrap();
-    let response: Request = serde_json::from_str(&string).unwrap();
-    response
 }
 
 async fn make_response(socket: &mut TcpStream, action: Action, data: String) {

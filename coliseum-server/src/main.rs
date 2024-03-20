@@ -11,7 +11,7 @@ use tokio::{io::AsyncReadExt, net::TcpListener};
 async fn main() {
 
     let mut node = Node {
-        addr: "127.0.0.1:5002".to_string(),
+        addr: "127.0.0.1:5000".to_string(),
         register_addr: "127.0.0.1:5000".to_string(),
         nodes: Arc::new(RwLock::new(HashSet::new())),
         storage: Arc::new(RwLock::new(Vec::new())),
@@ -26,6 +26,6 @@ async fn main() {
         let mut buf = [0; 1024];
         let n = socket.read(&mut buf).await.unwrap();
         let request = String::from_utf8_lossy(&buf[..n]).to_string();
-        node.handle_connection(&mut socket, request).await;
+        node.handle_client_connection(&mut socket, request).await;
     }
 }
