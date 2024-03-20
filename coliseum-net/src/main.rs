@@ -2,16 +2,29 @@ mod node;
 
 use node::Node;
 
-use tokio::{io::BufStream, net::TcpListener};
+use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}};
 
 use std::{
     collections::HashSet,
-    sync::{Arc, RwLock}
+    sync::{Arc, RwLock},
 };
 
 
+async fn handle_connection(socket:&mut TcpStream) {
+    let mut buf = [0; 1024];
 
-
+    match socket.read(&mut buf).await{
+        Ok(n) => {
+            if n > 0 {
+                let string = String::from_utf8(buf[..n].to_vec()).unwrap();
+                println!("{}", &string);
+            }else{
+                println!("No bytes where sent by the peer");
+            }
+        },
+        Err(err) => println!("An error ocurred:{}", err)
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -31,17 +44,15 @@ async fn main() {
         node.register_node_in_entrypoint().await;
     }
 
-
     let listener = TcpListener::bind(node.addr.clone()).await.unwrap();
+    println!("Listening on: {}", node.addr.clone());
 
     loop {
-        let (stream, addr) = listener.accept().await.unwrap();
+        let (mut socket, addr) = listener.accept().await.unwrap();
+        println!("New connection: {}", addr);
 
         tokio::spawn(async move {
-            let buf = [0,1024];
-            let stream = BufStream::new(stream);
-    
+            handle_connection(&mut socket).await;
         });
     }
-
 }
