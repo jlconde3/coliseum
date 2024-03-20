@@ -1,30 +1,14 @@
 mod node;
+mod req;
 
 use node::Node;
-
-use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}};
+use req::handle_connection;
+use tokio::net::TcpListener;
 
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
 };
-
-
-async fn handle_connection(socket:&mut TcpStream) {
-    let mut buf = [0; 1024];
-
-    match socket.read(&mut buf).await{
-        Ok(n) => {
-            if n > 0 {
-                let string = String::from_utf8(buf[..n].to_vec()).unwrap();
-                println!("{}", &string);
-            }else{
-                println!("No bytes where sent by the peer");
-            }
-        },
-        Err(err) => println!("An error ocurred:{}", err)
-    }
-}
 
 #[tokio::main]
 async fn main() {
