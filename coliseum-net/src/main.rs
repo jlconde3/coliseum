@@ -1,10 +1,10 @@
 mod node;
-mod req;
 
-use node::Node;
-use req::handle_connection;
-use tokio::net::TcpListener;
-
+use node::{handle_connection, Node};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpStream, TcpListener},
+};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
@@ -25,18 +25,28 @@ async fn main() {
     };
 
     if port != 5000 {
-        node.register_node_in_entrypoint().await;
+        node.register_node().await;
     }
 
+    println!("Listening on: {}", &node.addr);
     let listener = TcpListener::bind(node.addr.clone()).await.unwrap();
-    println!("Listening on: {}", node.addr.clone());
 
     loop {
-        let (mut socket, addr) = listener.accept().await.unwrap();
-        println!("New connection: {}", addr);
+        let (mut socket, node_addr) = listener.accept().await.unwrap();
+        println!("New connection: {}", &node_addr);
+        let node_loop = node.clone();
 
         tokio::spawn(async move {
-            handle_connection(&mut socket).await;
+            let mut buf = [0; 1024];
+            match socket.read(&mut buf).await {
+                Ok(n)=>{
+                    let request = String::from_utf8(buf[..n].to_vec()).unwrap();
+                    handle_connection(&mut socket, request, node_loop).await;
+                }
+                Err(err) => println!("An error ocurred:{}", err),
+            }
         });
     }
 }
+
+
