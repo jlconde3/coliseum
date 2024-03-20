@@ -3,7 +3,7 @@
 .vscode
 __pycache__
 coliseum-chain/target
-coliseum-net/target
+coliseum-server/target
 coliseum-client/target
 
 # Files

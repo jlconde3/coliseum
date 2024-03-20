@@ -1,26 +1,28 @@
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
+mod node;
+
+use node::Node;
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
+
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Connect to the server
-    let mut stream = TcpStream::connect("127.0.0.1:5000").await?;
+async fn main() {
 
-    // Write data to the server
-    stream.write_all(b"Hello from client!").await?;
+    let mut node = Node {
+        addr: "127.0.0.1:5002".to_string(),
+        register_addr: "127.0.0.1:5000".to_string(),
+        nodes: Arc::new(RwLock::new(HashSet::new())),
+        storage: Arc::new(RwLock::new(Vec::new())),
+    };
 
-    
-    let mut buf = [0; 1024];
-    match stream.read(&mut buf).await {
-        Ok(n) => {
-            if n > 0 {
-                let string = String::from_utf8(buf[..n].to_vec()).unwrap();
-                println!("{}", &string);
-            } else {
-                println!("No bytes where sent by the peer");
-            }
-        }
-        Err(err) => println!("An error ocurred:{}", err),
+    node.register_node().await;
+
+    let nodes = node.nodes.read().unwrap().clone();
+
+    for node in nodes{
+        println!("{}", node)
     }
-    Ok(())
+
 }
