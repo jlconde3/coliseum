@@ -71,24 +71,11 @@ impl Node {
         None // Item not found
     }
     
-    pub async fn handle_client_connection(&mut self, socket: &mut TcpStream, request: String) {
+    pub async fn handle_client_connection(&mut self, socket: &mut TcpStream, request: Request) {
         // Procesamiento de la petición desde  un nodo
-        let request: Request = serde_json::from_str(&request).unwrap();
 
         match request.action {
-            Action::REGISTER => {
-                // Un nuevo nodo/cliente se registra en el nodo y envía la lista de nodos.
-                self.nodes.write().unwrap().insert(request.data.clone()); // Se añade el nuevo nodo.
-                let nodes = self.nodes.read().unwrap().clone();
-                make_response(
-                    socket,
-                    Entity::NODE,
-                    Action::SUCCESS,
-                    serde_json::to_string(&nodes).unwrap(),
-                )
-                .await;
-            }
-            
+
             Action::CREATE => {
                 // Crea un nuevo item
                 let content = request.data.clone();
@@ -117,14 +104,49 @@ impl Node {
                 .await;
             }
 
-            Action::SUCCESS => {
-                //Algo
+            Action::REGISTER =>{
+                //NA
             }
+
+            Action::SUCCESS => {
+                //NA
+            }
+
+
         }
     }
 
-    pub async fn handle_server_connection(&mut self, socket: &mut TcpStream, request: String){
-        let request: Request = serde_json::from_str(&request).unwrap();
+    pub async fn handle_server_connection(&mut self, socket: &mut TcpStream, request: Request){
+
+        match request.action {
+            
+            Action::REGISTER => {
+                // Un nuevo nodo/cliente se registra en el nodo y envía la lista de nodos.
+                self.nodes.write().unwrap().insert(request.data.clone()); // Se añade el nuevo nodo.
+                let nodes = self.nodes.read().unwrap().clone();
+                make_response(
+                    socket,
+                    Entity::NODE,
+                    Action::SUCCESS,
+                    serde_json::to_string(&nodes).unwrap(),
+                )
+                .await;
+            }
+
+            Action::CREATE => {
+                //NA
+            }
+
+            Action::RETRIEVE =>{
+                //NA
+            }
+            
+            Action::SUCCESS => {
+                //NA
+            }
+        }
+
+        
     }
 }
 
