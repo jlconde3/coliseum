@@ -1,11 +1,13 @@
-
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -27,24 +29,23 @@ pub enum Action {
     REGISTER,
     SUCCESS,
     CREATE,
-    RETRIEVE
+    RETRIEVE,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum  Entity {
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum Entity {
     NODE,
-    CLIENT
+    CLIENT,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Request {
-    entity: Entity,
-    action: Action,
-    data: String,
+    pub entity: Entity,
+    pub action: Action,
+    pub data: String,
 }
 
 impl Node {
-
     pub fn create_item(&mut self, content: String) -> Item {
         let item = Item {
             id: Uuid::new_v4().to_string().replace("-", ""),
@@ -70,24 +71,32 @@ impl Node {
         }
         None // Item not found
     }
-    
+
+    pub async fn distrbute_item(&self, data: String) {
+        //Distribuye por la red de nodos un item recibido por un cliente de manera secuencial.
+
+        let nodes = self.nodes.read().unwrap().clone();
+        for node in nodes {
+            let mut stream = TcpStream::connect(node).await.unwrap();
+            make_request(&mut stream, Entity::NODE, Action::CREATE, data.clone()).await;
+        }
+    }
+
     pub async fn handle_client_connection(&mut self, socket: &mut TcpStream, request: Request) {
         // Procesamiento de la petición desde  un nodo
 
         match request.action {
-
             Action::CREATE => {
-                // Crea un nuevo item
+                // Crea el item
                 let content = request.data.clone();
                 let item = self.create_item(content);
+                let data = serde_json::to_string(&item).unwrap();
 
-                make_response(
-                    socket,
-                    Entity::NODE,
-                    Action::SUCCESS,
-                    serde_json::to_string(&item).unwrap(),
-                )
-                .await;
+                // Envia una respuesta al cliente
+                make_response(socket, Entity::NODE, Action::SUCCESS, data.clone()).await;
+
+                //Distribuye la información entre los nodos
+                self.distrbute_item(data).await;
             }
 
             Action::RETRIEVE => {
@@ -95,6 +104,7 @@ impl Node {
                 let id = request.data.clone();
                 let item = self.retrieve_item(id);
 
+                // Devuelve al cliente el item.
                 make_response(
                     socket,
                     Entity::NODE,
@@ -104,22 +114,18 @@ impl Node {
                 .await;
             }
 
-            Action::REGISTER =>{
+            Action::REGISTER => {
                 //NA
             }
 
             Action::SUCCESS => {
                 //NA
             }
-
-
         }
     }
 
-    pub async fn handle_server_connection(&mut self, socket: &mut TcpStream, request: Request){
-
+    pub async fn handle_server_connection(&mut self, socket: &mut TcpStream, request: Request) {
         match request.action {
-            
             Action::REGISTER => {
                 // Un nuevo nodo/cliente se registra en el nodo y envía la lista de nodos.
                 self.nodes.write().unwrap().insert(request.data.clone()); // Se añade el nuevo nodo.
@@ -134,24 +140,59 @@ impl Node {
             }
 
             Action::CREATE => {
+                //Crea un item a partir de un request
+                // por parte de otro nodo y se almacena en el nodo
+                let content = request.data.clone();
+                let _ = self.create_item(content);
+            }
+
+            Action::RETRIEVE => {
                 //NA
             }
 
-            Action::RETRIEVE =>{
-                //NA
-            }
-            
             Action::SUCCESS => {
                 //NA
             }
         }
-
-        
     }
 }
 
-async fn make_response(socket: &mut TcpStream, entity:Entity, action: Action, data: String) {
-    let req = Request { entity, action, data };
+async fn make_response(socket: &mut TcpStream, entity: Entity, action: Action, data: String) {
+    // Genera una respuesta para un cliente
+    let req = Request {
+        entity,
+        action,
+        data,
+    };
     let json = serde_json::to_string(&req).unwrap().into_bytes();
     socket.write_all(&json).await.unwrap();
+}
+
+async fn make_request(
+    stream: &mut TcpStream,
+    entity: Entity,
+    action: Action,
+    data: String,
+) -> Request {
+    // Genera una petición para un cliente
+    
+    // Preparación de la petición al nodo
+    let req = Request {
+        entity,
+        action,
+        data,
+    };
+    let json = serde_json::to_string(&req).unwrap().into_bytes();
+
+    // Envio del mensaje al nodo
+    stream.write_all(&json).await.unwrap();
+
+    // Esperamos la respuesta del nodo
+    let mut buf = [0; 1024];
+    let n = stream.read(&mut buf).await.unwrap();
+
+    // Procesameos la respuesta del nodo
+    let string = String::from_utf8(buf[..n].to_vec()).unwrap();
+    let response: Request = serde_json::from_str(&string).unwrap();
+    response
 }
