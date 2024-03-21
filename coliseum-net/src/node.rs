@@ -1,6 +1,6 @@
-mod node;
+mod lib;
 
-use node::{Node, Request, Entity};
+use lib::{Node, Request, Entity};
 use std::{
     collections::HashSet,
     sync::{Arc, RwLock},

@@ -1,3 +1,4 @@
+
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -195,4 +196,53 @@ async fn make_request(
     let string = String::from_utf8(buf[..n].to_vec()).unwrap();
     let response: Request = serde_json::from_str(&string).unwrap();
     response
+}
+
+
+
+impl Client {
+    pub async fn register_client(&mut self) {
+        // Conexión al nodo de registro
+        let mut stream = TcpStream::connect(&self.register_addr).await.unwrap();
+
+        // Enviamos la petición al nodo de registro y esperamos la respuesta
+        let res = make_request(
+            &mut stream,
+            Entity::CLIENT,
+            Action::REGISTER,
+            self.addr.clone(),
+        )
+        .await;
+
+        // Extraemos los nodos incluido en el campo data de la respuesta del servidor
+        let clients: Vec<String> = serde_json::from_str(&res.data).unwrap();
+
+        for client in clients {
+            self.clients.write().unwrap().insert(client);
+        }
+    }
+
+    pub async fn send_item(&mut self, data: String) -> Item {
+        // Conexión al nodo
+        let mut stream = TcpStream::connect(&self.register_addr).await.unwrap();
+
+        // Enviamos la petición al nodo y esperamos la respuesta
+        let res = make_request(&mut stream, Entity::CLIENT, Action::CREATE, data).await;
+
+        // Extraemos el item creado por el nodo
+        let item: Item = serde_json::from_str(&res.data).unwrap();
+        item
+    }
+
+    pub async fn retrive_item(&mut self, data: String) -> Item {
+        // Conexión al nodo
+        let mut stream = TcpStream::connect(&self.register_addr).await.unwrap();
+
+        // Enviamos la petición al nodo y esperamos la respuesta
+        let res = make_request(&mut stream, Entity::CLIENT, Action::RETRIEVE, data).await;
+
+        // Extraemos el item creado por el nodo
+        let item: Item = serde_json::from_str(&res.data).unwrap();
+        item
+    }
 }
