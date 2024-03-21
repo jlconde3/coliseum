@@ -3,9 +3,7 @@
 .vscode
 __pycache__
 coliseum-chain/target
-coliseum-server/target
-coliseum-client/target
-coliseum-server-2
+coliseum-net/target
 
 # Files
 *.pyc
