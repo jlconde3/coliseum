@@ -31,7 +31,14 @@ pub enum Action {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum  Entity {
+    NODE,
+    CLIENT
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Request {
+    entity: Entity,
     action: Action,
     data: String,
 }
@@ -75,6 +82,7 @@ impl Node {
                 let nodes = self.nodes.read().unwrap().clone();
                 make_response(
                     socket,
+                    Entity::NODE,
                     Action::SUCCESS,
                     serde_json::to_string(&nodes).unwrap(),
                 )
@@ -88,6 +96,7 @@ impl Node {
 
                 make_response(
                     socket,
+                    Entity::NODE,
                     Action::SUCCESS,
                     serde_json::to_string(&item).unwrap(),
                 )
@@ -101,6 +110,7 @@ impl Node {
 
                 make_response(
                     socket,
+                    Entity::NODE,
                     Action::SUCCESS,
                     serde_json::to_string(&item).unwrap(),
                 )
@@ -112,10 +122,14 @@ impl Node {
             }
         }
     }
+
+    pub async fn handle_server_connection(&mut self, socket: &mut TcpStream, request: String){
+        let request: Request = serde_json::from_str(&request).unwrap();
+    }
 }
 
-async fn make_response(socket: &mut TcpStream, action: Action, data: String) {
-    let req = Request { action, data };
+async fn make_response(socket: &mut TcpStream, entity:Entity, action: Action, data: String) {
+    let req = Request { entity, action, data };
     let json = serde_json::to_string(&req).unwrap().into_bytes();
     socket.write_all(&json).await.unwrap();
 }
