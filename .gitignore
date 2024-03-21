@@ -5,6 +5,7 @@ __pycache__
 coliseum-chain/target
 coliseum-server/target
 coliseum-client/target
+coliseum-server-2
 
 # Files
 *.pyc

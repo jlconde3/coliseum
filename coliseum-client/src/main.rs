@@ -126,15 +126,6 @@ async fn main() {
         storage: Arc::new(RwLock::new(Vec::new())),
     };
 
-    println!("-----------REGISTRANDO AL CLIENTE EN EL NODO------------");
-
-    client.register_client().await;
-    let clients = client.clients.read().unwrap().clone();
-
-    for client in clients {
-        println!("{}", client)
-    }
-
     println!("-----------CREANDO UN ITEM------------");
 
     let item = client
