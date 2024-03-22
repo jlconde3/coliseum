@@ -1,14 +1,17 @@
-mod lib;
 
-use lib::{Entity, Node, Request};
+
+use node::{Node, Entity, Request};
 use std::io::{BufReader, Read};
 use std::net::TcpListener;
 
 fn main() {
-    let addr = "127.0.0.1:5000".to_string();
+    let addr = "127.0.0.1:5001".to_string();
     let register_addr = "127.0.0.1:5000".to_string();
 
     let mut node = Node::new(&addr, &register_addr);
+
+    // Se registra el nodo en el nodo principal;
+    node.register();
 
     println!("Listening on: {}", &node.addr);
     let listener = TcpListener::bind(&node.addr).unwrap();

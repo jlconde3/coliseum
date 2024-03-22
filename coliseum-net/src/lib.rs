@@ -99,6 +99,22 @@ impl Node {
         node
     }
 
+    pub fn register(&mut self){
+
+        let mut stream = TcpStream::connect(&self.register_addr).unwrap();
+        
+        match make_request(&mut stream, Entity::NODE, Action::REGISTER, self.addr.clone()){
+            Ok(res) =>{
+                let nodes:HashSet<String> = serde_json::from_str(&res.data).unwrap();
+                for node in nodes{
+                    self.nodes.insert(node);
+                }
+            }
+            Err(error)=>println!("{}", error)
+        }
+
+    }
+
     pub fn create_item(&mut self, content: String) -> Result<Item, Box<dyn std::error::Error>> {
         // Crea un item en el nodo a partir de la información.
         let item = Item {
@@ -171,8 +187,8 @@ impl Node {
             Action::RETRIEVE => {
                 // Recupera un Item concreto.
 
-                println!("Retrieving a item request by a client");
                 let id = request.data;
+                println!("Retrieving a item requested by a client => {}", &id);
 
                 match self.retrieve_item(&id) {
                     Ok(item) => {
@@ -206,6 +222,9 @@ impl Node {
     pub fn handle_server_connection(&mut self, stream: &mut TcpStream, request: Request) {
         match request.action {
             Action::REGISTER => {
+
+                println!("Registering a new node");
+
                 // Un nuevo nodo se registra en el nodo y envía la lista de nodos.
                 self.nodes.insert(request.data.clone()); // Se añade el nuevo nodo.
                 let nodes = self.nodes.clone();
@@ -223,6 +242,8 @@ impl Node {
 
             Action::CREATE => {
                 // Crea el item
+                println!("Creating an item from another node");
+                
                 let content = request.data.clone();
                 match self.create_item(content) {
                     Ok(item) => {
