@@ -129,7 +129,7 @@ impl Node {
         for node in &self.nodes {
             let mut stream = TcpStream::connect(node).unwrap();
             match make_request(&mut stream, Entity::NODE, Action::CREATE, data.clone()) {
-                Ok(req) => {
+                Ok(_) => {
                     // Nada
                 }
                 Err(error) => {
