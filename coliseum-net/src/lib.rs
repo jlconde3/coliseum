@@ -36,9 +36,18 @@ pub struct Request {
     pub data: String,
 }
 
-fn make_response(stream:&mut TcpStream, entity: Entity, action: Action, data: String) -> Result<(), Box<dyn std::error::Error>> {
+fn make_response(
+    stream: &mut TcpStream,
+    entity: Entity,
+    action: Action,
+    data: String,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Genera una petición para desde un nodo/cliente a otro nodo
-    let req = Request { entity, action, data: data.to_string()};
+    let req = Request {
+        entity,
+        action,
+        data: data.to_string(),
+    };
     let json = serde_json::to_string(&req).unwrap().into_bytes();
     // Envio del mensaje al nodo
     stream.write_all(&json).unwrap();
@@ -46,9 +55,18 @@ fn make_response(stream:&mut TcpStream, entity: Entity, action: Action, data: St
     Ok(())
 }
 
-fn make_request(to_addr:&String, entity: Entity, action: Action, data: String) -> Result<Request, Box<dyn std::error::Error>> {
+fn make_request(
+    to_addr: &String,
+    entity: Entity,
+    action: Action,
+    data: String,
+) -> Result<Request, Box<dyn std::error::Error>> {
     // Genera una petición para desde un nodo/cliente a otro nodo
-    let req = Request { entity, action, data: data.to_string()};
+    let req = Request {
+        entity,
+        action,
+        data: data.to_string(),
+    };
     let json = serde_json::to_string(&req).unwrap().into_bytes();
 
     // Envio del mensaje al nodo
@@ -87,15 +105,19 @@ impl Node {
     }
 
     pub fn register(&mut self) {
-
-        match make_request(&self.register_addr, Entity::NODE, Action::REGISTER, self.addr.clone()) {
+        match make_request(
+            &self.register_addr,
+            Entity::NODE,
+            Action::REGISTER,
+            self.addr.clone(),
+        ) {
             Ok(res) => {
                 let nodes: HashSet<String> = serde_json::from_str(&res.data).unwrap();
                 for node in nodes {
-                    if node != self.addr{
+                    if node != self.addr {
                         println!("{}", node);
                         self.nodes.insert(node);
-                    }else {
+                    } else {
                         continue;
                     }
                 }
@@ -133,7 +155,7 @@ impl Node {
     pub fn distrbute_item(&self, data: String) {
         //Distribuye por la red de nodos un item de manera secuencial.
         for node in &self.nodes {
-            if node == &self.addr{
+            if node == &self.addr {
                 continue;
             }
             println!("Data sending to {}", &node);
@@ -214,7 +236,6 @@ impl Node {
 
     /// Equivalante al view para la gestión de las acciones contra/desde los nodos.
     pub fn handle_node_connection(&mut self, stream: &mut TcpStream, request: Request) {
-
         match request.action {
             Action::REGISTER => {
                 // Un nuevo nodo se registra en el nodo y envía la lista de nodos.
@@ -236,7 +257,7 @@ impl Node {
             Action::CREATE => {
                 // Crea el item
                 println!("Creating an item from another node");
-                let item:Item = serde_json::from_str(&request.data).unwrap();
+                let item: Item = serde_json::from_str(&request.data).unwrap();
                 self.storage.push(item.clone());
 
                 match make_response(stream, Entity::NODE, Action::SUCCESS, request.data.clone()) {
