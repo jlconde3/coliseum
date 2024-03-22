@@ -5,7 +5,7 @@ use std::io::{BufReader, Read};
 use std::net::TcpListener;
 
 fn main() {
-    let addr = "127.0.0.1:5002".to_string();
+    let addr = "127.0.0.1:5003".to_string();
     let register_addr = "127.0.0.1:5000".to_string();
 
     let mut node = Node::new(&addr, &register_addr);

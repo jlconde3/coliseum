@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
+
 use std::{
     collections::HashSet,
     io::{Read, Write},
     net::TcpStream,
+    sync::{Arc,Mutex},
+    thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -83,24 +86,43 @@ fn make_request(
     Ok(response)
 }
 
+pub fn distrbute_item(addr:String, nodes:HashSet<String>, data: String) {
+    //Distribuye por la red de nodos un item de manera secuencial.
+
+    for node in nodes{
+        if node == addr {
+            continue;
+        }
+        println!("Data sending to {}", &node);
+        match make_request(&node, Entity::NODE, Action::CREATE, data.clone()) {
+            Ok(_) => {
+                println!("Data send to {}", &node);
+            }
+            Err(error) => {
+                println!("{}", error)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Node {
     pub addr: String,
     pub register_addr: String,
-    pub nodes: HashSet<String>,
+    pub nodes: Arc<Mutex<HashSet<String>>>,
     pub storage: Vec<Item>,
 }
 
 impl Node {
     pub fn new(addr: &String, register_addr: &String) -> Self {
-        let mut node = Node {
+        let node = Node {
             addr: addr.clone(),
             register_addr: register_addr.clone(),
-            nodes: HashSet::new(),
+            nodes: Arc::new(Mutex::new(HashSet::new())),
             storage: Vec::new(),
         };
 
-        node.nodes.insert(addr.clone());
+        node.nodes.lock().unwrap().insert(addr.clone());
         node
     }
 
@@ -115,8 +137,7 @@ impl Node {
                 let nodes: HashSet<String> = serde_json::from_str(&res.data).unwrap();
                 for node in nodes {
                     if node != self.addr {
-                        println!("{}", node);
-                        self.nodes.insert(node);
+                        self.nodes.lock().unwrap().insert(node);
                     } else {
                         continue;
                     }
@@ -152,23 +173,6 @@ impl Node {
         Err(format!("Item with ID '{}' not found", id))
     }
 
-    pub fn distrbute_item(&self, data: String) {
-        //Distribuye por la red de nodos un item de manera secuencial.
-        for node in &self.nodes {
-            if node == &self.addr {
-                continue;
-            }
-            println!("Data sending to {}", &node);
-            match make_request(&node, Entity::NODE, Action::CREATE, data.clone()) {
-                Ok(_) => {
-                    println!("Data send to {}", &node);
-                }
-                Err(error) => {
-                    println!("{}", error)
-                }
-            }
-        }
-    }
 
     /// Equivalante al view para la gestión de las acciones desde los clientes.
     pub fn handle_client_connection(&mut self, stream: &mut TcpStream, request: Request) {
@@ -179,20 +183,27 @@ impl Node {
                 // Crea un item
                 println!("Creating a new item sent by a client");
                 let content = request.data.clone();
+
                 match self.create_item(content) {
                     Ok(item) => {
                         let data = serde_json::to_string(&item).unwrap();
-                        // Envia una respuesta al cliente
+
+                        // Realizamos la siguiente en paralelo. Debido a que la operación de enviar una respuesta al cliente
+                        // no es bloqueante con la función de enviar item se pueden crear un nuevo hilo para el envío del item
+                        // al resto de nodos
+
+                        // Envia una respuesta al client
                         match make_response(stream, Entity::NODE, Action::SUCCESS, data.clone()) {
-                            Ok(_) => {
-                                //Distribuye la información entre los nodos
-                                println!("Distributing item to nodes");
-                                self.distrbute_item(data);
-                            }
+                            Ok(_) => {}
                             Err(error) => {
                                 println!("{}", error);
                             }
                         };
+
+                        let nodes = self.nodes.lock().unwrap().clone();
+                        let addr = self.addr.clone();
+
+                        thread::spawn(move || distrbute_item(addr, nodes, data.clone()));
                     }
                     Err(error) => {
                         println!("{}", error);
@@ -239,8 +250,8 @@ impl Node {
         match request.action {
             Action::REGISTER => {
                 // Un nuevo nodo se registra en el nodo y envía la lista de nodos.
-                self.nodes.insert(request.data.clone()); // Se añade el nuevo nodo.
-                let nodes = self.nodes.clone();
+                self.nodes.lock().unwrap().insert(request.data.clone()); // Se añade el nuevo nodo.
+                let nodes = self.nodes.lock().unwrap().clone();
                 let data = serde_json::to_string(&nodes).unwrap();
 
                 match make_response(stream, Entity::NODE, Action::SUCCESS, data) {

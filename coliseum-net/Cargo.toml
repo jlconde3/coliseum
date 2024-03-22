@@ -16,9 +16,13 @@ serde = { version = "1.0.197", features = ["derive"] }
 
 
 [[bin]]
-name = "node_register"
+name = "node1"
 path = "src/bin/node1.rs"
 
 [[bin]]
-name = "node"
+name = "node2"
 path = "src/bin/node2.rs"
+
+[[bin]]
+name = "node3"
+path = "src/bin/node3.rs"
