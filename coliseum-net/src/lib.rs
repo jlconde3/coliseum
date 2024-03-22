@@ -36,38 +36,23 @@ pub struct Request {
     pub data: String,
 }
 
-fn make_response(
-    stream: &mut TcpStream,
-    entity: Entity,
-    action: Action,
-    data: String,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Genera una respuesta para un cliente/nodo
-    let req = Request {
-        entity,
-        action,
-        data: data.to_string(),
-    };
+fn make_response(stream:&mut TcpStream, entity: Entity, action: Action, data: String) -> Result<(), Box<dyn std::error::Error>> {
+    // Genera una petición para desde un nodo/cliente a otro nodo
+    let req = Request { entity, action, data: data.to_string()};
     let json = serde_json::to_string(&req).unwrap().into_bytes();
+    // Envio del mensaje al nodo
     stream.write_all(&json).unwrap();
+
     Ok(())
 }
 
-fn make_request(
-    stream: &mut TcpStream,
-    entity: Entity,
-    action: Action,
-    data: String,
-) -> Result<Request, Box<dyn std::error::Error>> {
+fn make_request(to_addr:&String, entity: Entity, action: Action, data: String) -> Result<Request, Box<dyn std::error::Error>> {
     // Genera una petición para desde un nodo/cliente a otro nodo
-    let req = Request {
-        entity,
-        action,
-        data: data.to_string(),
-    };
+    let req = Request { entity, action, data: data.to_string()};
     let json = serde_json::to_string(&req).unwrap().into_bytes();
 
     // Envio del mensaje al nodo
+    let mut stream = TcpStream::connect(to_addr).unwrap();
     stream.write_all(&json).unwrap();
 
     // Esperamos la respuesta del nodo
@@ -90,29 +75,34 @@ pub struct Node {
 
 impl Node {
     pub fn new(addr: &String, register_addr: &String) -> Self {
-        let node = Node {
+        let mut node = Node {
             addr: addr.clone(),
             register_addr: register_addr.clone(),
             nodes: HashSet::new(),
             storage: Vec::new(),
         };
+
+        node.nodes.insert(addr.clone());
         node
     }
 
-    pub fn register(&mut self){
+    pub fn register(&mut self) {
 
-        let mut stream = TcpStream::connect(&self.register_addr).unwrap();
-        
-        match make_request(&mut stream, Entity::NODE, Action::REGISTER, self.addr.clone()){
-            Ok(res) =>{
-                let nodes:HashSet<String> = serde_json::from_str(&res.data).unwrap();
-                for node in nodes{
-                    self.nodes.insert(node);
+        match make_request(&self.register_addr, Entity::NODE, Action::REGISTER, self.addr.clone()) {
+            Ok(res) => {
+                let nodes: HashSet<String> = serde_json::from_str(&res.data).unwrap();
+                for node in nodes {
+                    if node != self.addr{
+                        println!("{}", node);
+                        self.nodes.insert(node);
+                    }else {
+                        continue;
+                    }
                 }
+                println!("Node register successfully");
             }
-            Err(error)=>println!("{}", error)
+            Err(error) => println!("{}", error),
         }
-
     }
 
     pub fn create_item(&mut self, content: String) -> Result<Item, Box<dyn std::error::Error>> {
@@ -143,10 +133,13 @@ impl Node {
     pub fn distrbute_item(&self, data: String) {
         //Distribuye por la red de nodos un item de manera secuencial.
         for node in &self.nodes {
-            let mut stream = TcpStream::connect(node).unwrap();
-            match make_request(&mut stream, Entity::NODE, Action::CREATE, data.clone()) {
+            if node == &self.addr{
+                continue;
+            }
+            println!("Data sending to {}", &node);
+            match make_request(&node, Entity::NODE, Action::CREATE, data.clone()) {
                 Ok(_) => {
-                    // Nada
+                    println!("Data send to {}", &node);
                 }
                 Err(error) => {
                     println!("{}", error)
@@ -161,7 +154,7 @@ impl Node {
 
         match request.action {
             Action::CREATE => {
-                // Crea el item
+                // Crea un item
                 println!("Creating a new item sent by a client");
                 let content = request.data.clone();
                 match self.create_item(content) {
@@ -171,6 +164,7 @@ impl Node {
                         match make_response(stream, Entity::NODE, Action::SUCCESS, data.clone()) {
                             Ok(_) => {
                                 //Distribuye la información entre los nodos
+                                println!("Distributing item to nodes");
                                 self.distrbute_item(data);
                             }
                             Err(error) => {
@@ -219,12 +213,10 @@ impl Node {
     }
 
     /// Equivalante al view para la gestión de las acciones contra/desde los nodos.
-    pub fn handle_server_connection(&mut self, stream: &mut TcpStream, request: Request) {
+    pub fn handle_node_connection(&mut self, stream: &mut TcpStream, request: Request) {
+
         match request.action {
             Action::REGISTER => {
-
-                println!("Registering a new node");
-
                 // Un nuevo nodo se registra en el nodo y envía la lista de nodos.
                 self.nodes.insert(request.data.clone()); // Se añade el nuevo nodo.
                 let nodes = self.nodes.clone();
@@ -232,6 +224,7 @@ impl Node {
 
                 match make_response(stream, Entity::NODE, Action::SUCCESS, data) {
                     Ok(_) => {
+                        println!("Node {} register successfuully", request.data);
                         //Nada
                     }
                     Err(error) => {
@@ -243,18 +236,12 @@ impl Node {
             Action::CREATE => {
                 // Crea el item
                 println!("Creating an item from another node");
-                
-                let content = request.data.clone();
-                match self.create_item(content) {
-                    Ok(item) => {
-                        let data = serde_json::to_string(&item).unwrap();
-                        // Envia una respuesta al cliente
-                        match make_response(stream, Entity::NODE, Action::SUCCESS, data.clone()) {
-                            Ok(_) => {}
-                            Err(error) => {
-                                println!("{}", error);
-                            }
-                        };
+                let item:Item = serde_json::from_str(&request.data).unwrap();
+                self.storage.push(item.clone());
+
+                match make_response(stream, Entity::NODE, Action::SUCCESS, request.data.clone()) {
+                    Ok(_) => {
+                        println!("Item {} created successfuully", item.id);
                     }
                     Err(error) => {
                         println!("{}", error);

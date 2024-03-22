@@ -23,7 +23,7 @@ fn main() {
         match request {
             Ok(request) => {
                 if request.entity == Entity::NODE {
-                    node.handle_server_connection(&mut stream, request);
+                    node.handle_node_connection(&mut stream, request);
                 } else if request.entity == Entity::CLIENT {
                     node.handle_client_connection(&mut stream, request);
                 }

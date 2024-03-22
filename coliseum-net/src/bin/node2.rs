@@ -13,6 +13,7 @@ fn main() {
     // Se registra el nodo en el nodo principal;
     node.register();
 
+
     println!("Listening on: {}", &node.addr);
     let listener = TcpListener::bind(&node.addr).unwrap();
 
@@ -28,7 +29,7 @@ fn main() {
         match request {
             Ok(request) => {
                 if request.entity == Entity::NODE {
-                    node.handle_server_connection(&mut stream, request);
+                    node.handle_node_connection(&mut stream, request);
                 } else if request.entity == Entity::CLIENT {
                     node.handle_client_connection(&mut stream, request);
                 }
