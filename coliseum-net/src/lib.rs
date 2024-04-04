@@ -176,11 +176,7 @@ impl Node {
         // Además se debe de tener en cuenta solo aquellos que permiten a hacer la consulta
         // es decir a los que estén en línea.
 
-        let nodes = &self.nodes.lock().unwrap().clone();
-
-        for node in nodes {
-
-        }
+        //let nodes = &self.nodes.lock().unwrap().clone();
 
         Err(format!("Item with ID '{}' not found", id))
     }
