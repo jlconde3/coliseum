@@ -4,6 +4,7 @@
 __pycache__
 coliseum-chain/target
 coliseum-net/target
+coliseum-client/node_modules
 
 # Files
 *.pyc
@@ -15,3 +16,4 @@ test.ipynb
 src/certs/private_key.key
 src/certs/certificate.csr
 *.lock
+

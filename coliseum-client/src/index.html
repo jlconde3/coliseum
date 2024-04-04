@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Hello World!</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <script src="./scripts.js" defer></script>
+</head>
+
+<body>
+
+    <div>
+        <h1>COLISEUM</h1>
+        <p></p>
+        <p>Welcome to Coliseum</p>
+        <p>Author: jose.conde@ghenova.com</p>
+        <p>Version: 0.1.0</p>
+    </div>
+
+    <div>
+        <h2>Create Item</h2>
+        <p>Use for creating an item into the coliseumn net</p>
+        <label for="node_ip">Node IP Address</label><br>
+        <input type="text" name="node_ip" id="node_ip"><br>
+        <label for="node_ip">Item content</label><br>
+        <textarea name="item_content" id="item_content"></textarea><br>
+        <button id="create_item">Create</button>
+    </div>
+
+    <div>
+        <h3>Create item response</h3><br>
+        <textarea id="create_response" disabled></textarea><br>
+    </div>
+
+    <div>
+        <h2>Retrieve item create</h2>
+        <p>Use for retrieve an item from the coliseumn net</p>
+        <label for="node_ip">Node IP Address</label><br>
+        <input type="text" name="node_ip" id="node_ip"><br>
+        <label for="node_ip">Item ID</label><br>
+        <input type="text" name="item_id" id="item_id"><br>
+        <button id="retrieve_item">Retrieve</button>
+    </div>
+
+    <div>
+        <h3>Retrieve item response</h3><br>
+        <textarea id="retrieve_response" disabled></textarea><br>
+    </div>
+    
+
+</body>
+
+</html>
