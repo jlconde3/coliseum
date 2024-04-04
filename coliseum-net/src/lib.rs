@@ -170,6 +170,18 @@ impl Node {
                 return Ok(item.clone());
             }
         }
+
+        // Si el item no se encuentra en el nodo, se pregunta al resto de nodos.
+        // Se tiene que preguntar a un número mínimo de nodos, al menos al 51% de los almacenados.
+        // Además se debe de tener en cuenta solo aquellos que permiten a hacer la consulta
+        // es decir a los que estén en línea.
+
+        let nodes = &self.nodes.lock().unwrap().clone();
+
+        for node in nodes {
+
+        }
+
         Err(format!("Item with ID '{}' not found", id))
     }
 
@@ -218,6 +230,7 @@ impl Node {
                 println!("Retrieving a item requested by a client => {}", &id);
 
                 match self.retrieve_item(&id) {
+
                     Ok(item) => {
                         let data = serde_json::to_string(&item).unwrap();
                         match make_response(stream, Entity::NODE, Action::SUCCESS, data.clone()) {
