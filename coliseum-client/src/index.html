@@ -19,10 +19,15 @@
     </div>
 
     <div>
-        <h2>Create Item</h2>
-        <p>Use for creating an item into the coliseumn net</p>
+        <h2>Node IP</h2>
         <label for="node_ip">Node IP Address</label><br>
-        <input type="text" name="node_ip" id="node_ip"><br>
+        <input type="text" name="node_ip" id="node_ip" required><br>
+    </div>
+
+
+    <div>
+        <h2>Create Item</h2>
+        <p>Use for creating an item into the coliseum net</p>
         <label for="node_ip">Item content</label><br>
         <textarea name="item_content" id="item_content"></textarea><br>
         <button id="create_item">Create</button>
@@ -35,10 +40,8 @@
 
     <div>
         <h2>Retrieve item create</h2>
-        <p>Use for retrieve an item from the coliseumn net</p>
-        <label for="node_ip">Node IP Address</label><br>
-        <input type="text" name="node_ip" id="node_ip"><br>
-        <label for="node_ip">Item ID</label><br>
+        <p>Use for retrieve an item from the coliseum net</p>
+        <label for="item_id">Item ID</label><br>
         <input type="text" name="item_id" id="item_id"><br>
         <button id="retrieve_item">Retrieve</button>
     </div>
