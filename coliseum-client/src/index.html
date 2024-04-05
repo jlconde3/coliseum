@@ -9,7 +9,6 @@
 </head>
 
 <body>
-
     <div>
         <h1>COLISEUM</h1>
         <p></p>
@@ -17,41 +16,65 @@
         <p>Author: jose.conde@ghenova.com</p>
         <p>Version: 0.1.0</p>
     </div>
-
     <div>
-        <h2>Node IP</h2>
-        <label for="node_ip">Node IP Address</label><br>
-        <input type="text" name="node_ip" id="node_ip" required><br>
+        <h2>Connecto to coliseum</h2>
+        <p>Connect to </p>
+
     </div>
-
-
     <div>
-        <h2>Create Item</h2>
-        <p>Use for creating an item into the coliseum net</p>
-        <label for="node_ip">Item content</label><br>
-        <textarea name="item_content" id="item_content"></textarea><br>
-        <button id="create_item">Create</button>
-    </div>
+        <h2>Account Information</h2>
+        <div>
+            <h3>User Information</h3>
+            <p>Select a node to connect to Coliseum Net</p>
+            <label for="node_ip">Node IP Address</label><br>
+            <input type="text" name="node_ip" id="node_ip" required><br>
+            <p>Introduce your username</p>
+            <input type="text" id="user_name"><br>
+            <button id="login">LogIn</button>
+            <p>User ID</p>
+            <input type="text" id="user_id" disabled>
+        </div>
+        <div id="balance">
+            <h3>Saldo en la cuenta</h3>
+            <input type="number" id="balance" disabled>
+        </div>
 
+        <div id="transactions">
+            <h3>Transactions</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="transaction_1">
+                        <td id="transaction_from">JLC</td>
+                        <td id="transaction_to">JLC</td>
+                        <td id="transaction_amount">10</td>
+                        <td id="transaction_status">Success</td>
+                        <td id="transaction_date">10/02/24</td>
+                        <td id="transaction_node">127.0.0.1:5000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <div>
-        <h3>Create item response</h3><br>
-        <textarea id="create_response" disabled></textarea><br>
+        <h2>Create transaction</h2>
+        <div>
+            <p>Fill this fields to create a new transaction</p>
+            <input id="new_transaction_to" type="text"><br>
+            <input id="new_transaction_amount" type="number"><br>
+            <input id="new_transaction_date" type="date"><br>
+            <button id="new_transaction">Create</button>
+        </div>
     </div>
-
-    <div>
-        <h2>Retrieve item create</h2>
-        <p>Use for retrieve an item from the coliseum net</p>
-        <label for="item_id">Item ID</label><br>
-        <input type="text" name="item_id" id="item_id"><br>
-        <button id="retrieve_item">Retrieve</button>
-    </div>
-
-    <div>
-        <h3>Retrieve item response</h3><br>
-        <textarea id="retrieve_response" disabled></textarea><br>
-    </div>
-    
-
 </body>
 
 </html>
