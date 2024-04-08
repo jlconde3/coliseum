@@ -3,26 +3,9 @@ name = "coliseum_net"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-name = "node"
-path = "src/lib.rs"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 uuid = { version = "1.8.0", features = ["v4"] }
 sha256 = "1.5.0"
 serde_json = "*"
 serde = { version = "1.0.197", features = ["derive"] }
-
-
-[[bin]]
-name = "node1"
-path = "src/bin/node1.rs"
-
-[[bin]]
-name = "node2"
-path = "src/bin/node2.rs"
-
-[[bin]]
-name = "node3"
-path = "src/bin/node3.rs"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
