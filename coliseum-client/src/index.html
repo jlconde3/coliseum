@@ -17,11 +17,6 @@
         <p>Version: 0.1.0</p>
     </div>
     <div>
-        <h2>Connecto to coliseum</h2>
-        <p>Connect to </p>
-
-    </div>
-    <div>
         <h2>Account Information</h2>
         <div>
             <h3>User Information</h3>
@@ -30,13 +25,14 @@
             <input type="text" name="node_ip" id="node_ip" required><br>
             <p>Introduce your username</p>
             <input type="text" id="user_name"><br>
-            <button id="login">LogIn</button>
-            <h3>ID</h3>
+            <button id="log_in_botton">LogIn</button>
+            <h4>Account ID</h4>
             <input type="text" id="user_id" disabled>
+
         </div>
         <div id="balance">
-            <h3>Balance</h3>
-            <input type="number" id="balance" disabled>
+            <h4>Balance</h4>
+            <input type="number" id="account_balance" disabled>
         </div>
 
         <div id="transactions">
@@ -49,18 +45,9 @@
                         <th>Amount</th>
                         <th>Date</th>
                         <th>Status</th>
-                        <th>Comments</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr id="transaction_1">
-                        <td id="transaction_from">JLC</td>
-                        <td id="transaction_to">JLC</td>
-                        <td id="transaction_amount">10</td>
-                        <td id="transaction_status">Success</td>
-                        <td id="transaction_date">10/02/24</td>
-                        <td id="transaction_node">127.0.0.1:5000</td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -68,11 +55,12 @@
     <div>
         <h2>Create transaction</h2>
         <div>
-            <p>Fill this fields to create a new transaction</p>
+            <p>Fill these fields to create a new transaction</p>
+            <label for="new_transaction_to">To:</label><br>
             <input id="new_transaction_to" type="text"><br>
+            <label for="new_transaction_amount">Amount</label><br>
             <input id="new_transaction_amount" type="number"><br>
-            <input id="new_transaction_date" type="date"><br>
-            <button id="new_transaction">Create</button>
+            <button id="transaction_botton">Create</button>
         </div>
     </div>
 </body>
