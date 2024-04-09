@@ -48,14 +48,24 @@ impl Request {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct GetAccountData{
+    user_name:String
+}
 
 fn main(){
 
+    let data = GetAccountData{
+        user_name:"Usuario1".to_string()
+    };
+
+    let json = serde_json::to_string(&data).unwrap();
+    
     let request = Request {
         endpoint : "GetAccount".to_string(),
         origin_addr: "localhost".to_string(),
         target_addr: "127.0.0.1:5000".to_string(),
-        data: "username1".to_string()
+        data: json
     };
 
     let response = request.send();

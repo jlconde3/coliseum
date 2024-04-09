@@ -7,16 +7,16 @@ use uuid::Uuid;
 /* Lógica de la petición de un cliente a un servidor */
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Request {
-    pub endpoint: String,
-    pub origin_addr: String,
-    pub target_addr: String,
-    pub data: String,
+ struct Request {
+     endpoint: String,
+     origin_addr: String,
+     target_addr: String,
+     data: String,
 }
 
 /* Lógica para el envio de respuesta del servidor a un cliente */
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Response {
+ struct Response {
     origin_addr: String,
     target_addr: String,
     data: String,
@@ -25,7 +25,7 @@ pub struct Response {
 
 impl Response {
     // Envía una
-    pub fn send(&self, stream: &mut TcpStream) {
+     fn send(&self, stream: &mut TcpStream) {
         let json = serde_json::to_string(&self).unwrap().into_bytes();
         stream.write_all(&json).unwrap();
     }
@@ -34,25 +34,26 @@ impl Response {
 /* Lógica de los ENDPOINTS */
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CreateAccountData {
-    username: String,
+ struct CreateAccountData {
+    user_name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GetAccountData {
+ struct GetAccountData {
     account_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CreateTransactionData {
+ struct CreateTransactionData {
     from_id: String,
     to_id: String,
     amount: f64,
 }
 
 /* Lógica de negocio */
-#[derive(Debug, Clone)]
-pub struct Transaction {
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+ struct Transaction {
     id: String,
     from_id: String,
     to_id: String,
@@ -61,8 +62,8 @@ pub struct Transaction {
     node: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct Account {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+ struct Account {
     id: String,
     created_time: f64,
     last_login: f64,
@@ -70,7 +71,8 @@ pub struct Account {
     balance: f64,
 }
 
-pub struct Server {
+#[derive(Debug, Clone)]
+ struct Server {
     addr: String,
     accounts: Vec<Account>,
     transactions: Vec<Transaction>,
@@ -78,7 +80,7 @@ pub struct Server {
 
 impl Server {
     /// Create a new server/node
-    pub fn new(addr: String) -> Server {
+     fn new(addr: String) -> Server {
         let server = Server {
             addr,
             accounts: Vec::new(),
@@ -88,13 +90,13 @@ impl Server {
     }
 
     /// Create a UUID
-    pub fn create_uuid() -> String {
+     fn create_uuid() -> String {
         let uuid = Uuid::new_v4().to_string().replace("-", "");
         uuid
     }
 
     /// Create the actual timestamp since UNIX EPOCH
-    pub fn create_timestamp() -> f64 {
+     fn create_timestamp() -> f64 {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -103,7 +105,7 @@ impl Server {
     }
 
     /// Static -> Create a new account using the user_name
-    pub fn create_account(&mut self, user_name: String) -> Account {
+     fn create_account(&mut self, user_name: String) -> Account {
         let timestamp = Server::create_timestamp();
         let account = Account {
             id: Server::create_uuid(),
@@ -117,7 +119,7 @@ impl Server {
     }
 
     /// Dyanamic -> Get an specific account query by its account ID
-    pub fn get_account(&mut self, account_id: &str) -> Result<&mut Account, ()> {
+     fn get_account(&mut self, account_id: &str) -> Result<&mut Account, ()> {
         for account in self.accounts.iter_mut() {
             if account_id == account.id {
                 return Ok(account);
@@ -130,7 +132,7 @@ impl Server {
     }
 
     ///Static -> Create a new transaction but it is not check
-    pub fn create_transaction(
+     fn create_transaction(
         &mut self,
         from_id: String,
         to_id: String,
@@ -149,12 +151,12 @@ impl Server {
     }
 
     /// Static -> Get all transactions stored in Server
-    pub fn get_all_transactions(self) -> Vec<Transaction> {
+     fn get_all_transactions(self) -> Vec<Transaction> {
         self.transactions.clone()
     }
 
     // Static -> Get an specific transaction query by ID
-    pub fn get_transaction(self, transaction_id: String) -> Result<Transaction, ()> {
+     fn get_transaction(self, transaction_id: String) -> Result<Transaction, ()> {
         for transaction in self.transactions.clone() {
             if transaction_id == transaction.id {
                 return Ok(transaction);
@@ -166,7 +168,7 @@ impl Server {
     }
 
     // Static -> Get an specific transaction query by ID
-    pub fn get_transaction_by_account(self, account_id: String) -> Vec<Transaction> {
+     fn get_transaction_by_account(self, account_id: String) -> Vec<Transaction> {
         let mut transactions = Vec::new();
         for transaction in self.transactions.clone() {
             if account_id == transaction.from_id {
@@ -179,7 +181,7 @@ impl Server {
     }
 
     /// Static -> Check if a transaction is valid
-    pub fn check_transaction(&mut self, transaction: Transaction) -> bool {
+     fn check_transaction(&mut self, transaction: Transaction) -> bool {
         let account_from = self.get_account(&transaction.from_id);
 
         match account_from {
@@ -217,6 +219,84 @@ impl Server {
     }
 }
 
+struct App {
+    server: Server,
+    stream:TcpStream, 
+    request: Request,
+}
+
+impl App {
+
+    /// Gestion para el clinete la creación de una cuenta
+    fn create_account(&mut self){
+
+        println!("Handeling CreateAccount endpoint");
+        println!("{}", self.request.origin_addr);
+    
+        let data:CreateAccountData = serde_json::from_str(&self.request.data).unwrap();
+        let account = self.server.create_account( data.user_name);
+
+        let response = Response {
+            origin_addr:self.server.addr.clone().to_string(),
+            target_addr:self.stream.peer_addr().unwrap().to_string(),
+            data:serde_json::to_string(&account).unwrap(),
+            status:200
+        };
+    
+        response.send(&mut self.stream);
+    }
+    
+    /// Gestiona para el cliente la obtención de una cuenta
+    fn get_account(&mut self){
+
+        println!("Handeling  GetAccount endpoint");
+        println!("{}", self.request.origin_addr);
+
+        let data:GetAccountData = serde_json::from_str(&self.request.data).unwrap();
+        println!("{}", data.account_id);
+    
+        let response = Response {
+            origin_addr:self.server.addr.clone().to_string(),
+            target_addr:self.stream.peer_addr().unwrap().to_string(),
+            data:self.request.data.clone(),
+            status:200
+        };
+        response.send(&mut self.stream);
+    }
+
+    fn create_transaction(&mut self){
+        println!("Handeling  CreateTransaction endpoint");
+        println!("{}", self.request.origin_addr);
+
+        let data:CreateTransactionData = serde_json::from_str(&self.request.data).unwrap();
+
+        let transaction = self.server.create_transaction(data.from_id, data.to_id, data.amount);
+    
+        let response = Response {
+            origin_addr:self.server.addr.clone().to_string(),
+            target_addr:self.stream.peer_addr().unwrap().to_string(),
+            data:serde_json::to_string(&transaction).unwrap(),
+            status:200
+        };
+        response.send(&mut self.stream);
+    }
+
+    fn handle_connection(&mut self){
+
+        // El servidor actua según el endpoint dentro de la Request
+        if self.request.endpoint == "GetAccount" {
+            self.get_account();
+        } else if self.request.endpoint == "CreateAccount" {
+            self.create_account();
+        } else if self.request.endpoint == "CreateTransaction" {
+            self.create_transaction();
+        } else {
+            println!("Invalid endpoint");
+        }
+    }
+}
+
+
 fn main() {
 
     let addr = "127.0.0.1:5000".to_string();
@@ -237,30 +317,12 @@ fn main() {
         // Se transforma el str a una estructura Request para procesar
         let request: Request = serde_json::from_str(&connection).unwrap();
 
-        // El servidor actua según el endpoint dentro de la Request
-        if request.endpoint == "GetAccount" {
-            println!("Handeling GetAccount endpoint");
-            println!("{}", request.origin_addr);
-            println!("{}", request.data);
+        let mut app = App {
+            stream,
+            server:server.clone(),
+            request:request.clone(),
+        };
 
-            let response = Response{
-                origin_addr:server.addr.clone().to_string(),
-                target_addr:stream.peer_addr().unwrap().to_string(),
-                data:request.data,
-                status:200
-            };
-
-            response.send(&mut stream);
-
-        } else if request.endpoint == "CreateAccount" {
-            println!("Handeling  CreateAccount endpoint");
-            println!("{}", request.origin_addr);
-            println!("{}", request.data);
-        } else if request.endpoint == "CreateTransaction" {
-            println!("Handeling CreateTransaction endpoint");
-            println!("{}", request.data);
-        } else {
-            println!("Invalid endpoint");
-        }
+        app.handle_connection();
     }
 }
