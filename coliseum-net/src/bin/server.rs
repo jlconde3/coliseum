@@ -1,6 +1,56 @@
+use serde::{Deserialize, Serialize};
+use std::io::{Read, Write, BufReader};
+use std::net::{TcpListener, TcpStream};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+ 
+/* Lógica de la petición de un cliente a un servidor */
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Request {
+    pub endpoint: String,
+    pub origin_addr: String,
+    pub target_addr: String,
+    pub data: String,
+}
+
+/* Lógica para el envio de respuesta del servidor a un cliente */
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Response {
+    origin_addr: String,
+    target_addr: String,
+    data: String,
+    status:u8,
+}
+
+impl Response {
+    // Envía una
+    pub fn send(&self, stream: &mut TcpStream) {
+        let json = serde_json::to_string(&self).unwrap().into_bytes();
+        stream.write_all(&json).unwrap();
+    }
+}
+
+/* Lógica de los ENDPOINTS */
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CreateAccountData {
+    username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GetAccountData {
+    account_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CreateTransactionData {
+    from_id: String,
+    to_id: String,
+    amount: f64,
+}
+
+/* Lógica de negocio */
 #[derive(Debug, Clone)]
 pub struct Transaction {
     id: String,
@@ -164,5 +214,53 @@ impl Server {
 
         self.transactions.push(transaction.clone());
         true
+    }
+}
+
+fn main() {
+
+    let addr = "127.0.0.1:5000".to_string();
+    let server = Server::new(addr);
+
+    println!("Listening on: {}", &server.addr);
+    let listener = TcpListener::bind(&server.addr).unwrap();
+
+    for stream in listener.incoming() {
+
+        // Procesamiento de las conexiones
+        let mut stream = stream.unwrap();
+        let mut buf = [0; 1024];
+        let mut reader = BufReader::new(&mut stream);
+        let n = reader.read(&mut buf).unwrap();
+        let connection = String::from_utf8_lossy(&buf[..n]).to_string();
+        
+        // Se transforma el str a una estructura Request para procesar
+        let request: Request = serde_json::from_str(&connection).unwrap();
+
+        // El servidor actua según el endpoint dentro de la Request
+        if request.endpoint == "GetAccount" {
+            println!("Handeling GetAccount endpoint");
+            println!("{}", request.origin_addr);
+            println!("{}", request.data);
+
+            let response = Response{
+                origin_addr:server.addr.clone().to_string(),
+                target_addr:stream.peer_addr().unwrap().to_string(),
+                data:request.data,
+                status:200
+            };
+
+            response.send(&mut stream);
+
+        } else if request.endpoint == "CreateAccount" {
+            println!("Handeling  CreateAccount endpoint");
+            println!("{}", request.origin_addr);
+            println!("{}", request.data);
+        } else if request.endpoint == "CreateTransaction" {
+            println!("Handeling CreateTransaction endpoint");
+            println!("{}", request.data);
+        } else {
+            println!("Invalid endpoint");
+        }
     }
 }

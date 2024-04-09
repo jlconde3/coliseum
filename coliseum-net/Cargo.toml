@@ -10,4 +10,10 @@ serde_json = "*"
 serde = { version = "1.0.197", features = ["derive"] }
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 
+[[bin]]
+name="client"
+src="client.rs"
 
+[[bin]]
+name="server"
+src="server.rs"
