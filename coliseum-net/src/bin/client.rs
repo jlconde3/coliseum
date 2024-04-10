@@ -1,7 +1,7 @@
 extern crate lib;
 
 use serde::{Deserialize, Serialize};
-use lib::{Account, CreateAccountData, GetAccountData, Response};
+use lib::{CreateAccountData, Response};
 use std::net::TcpStream;
 use std::io::{Read, Write};
 
