@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::error;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::{SystemTime, UNIX_EPOCH};
