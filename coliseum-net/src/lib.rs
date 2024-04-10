@@ -4,7 +4,6 @@ use std::net::TcpStream;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-
 /* Lógica de negocio */
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -24,6 +23,18 @@ pub struct Account {
     pub last_login: f64,
     pub username: String,
     pub balance: f64,
+}
+
+impl Account {
+    pub fn to_string(self) -> Result<String, String> {
+        match serde_json::to_string(&self.clone()){
+            Ok(data) => Ok(data),
+            Err(error) => {
+                println!("{}", error);
+                Err("Internal Server Error".to_string())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -60,8 +71,9 @@ impl App {
     }
 
     /// Static -> Create a new account using the username
-    pub fn create_account(&mut self, username: String) -> Account {
+    pub fn create_account(&mut self, username: String) -> Result<String, String> {
         let timestamp = App::create_timestamp();
+
         let account = Account {
             id: App::create_uuid(),
             created_time: timestamp.clone(),
@@ -69,8 +81,16 @@ impl App {
             username,
             balance: 0.0,
         };
-        self.accounts.push(account.clone());
-        account
+
+        let account_str = account.clone().to_string();
+
+        match account_str {
+            Ok(data) => {
+                self.accounts.push(account);
+                Ok(data)
+            }
+            Err(error) => Err(error),
+        }
     }
 
     /// Dyanamic -> Get an specific account query by its account ID
@@ -86,7 +106,7 @@ impl App {
         Err(())
     }
 
-    ///Static -> Create a new transaction but it is not check
+    /// Static -> Create a new transaction but it is not check
     pub fn create_transaction(
         &mut self,
         from_id: String,
@@ -174,11 +194,7 @@ impl App {
     }
 }
 
-
-
-
 /* Protocolo de comuncicación */
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Response {
@@ -223,7 +239,6 @@ impl Request {
         response
     }
 }
-
 
 /* Estructuras de datos */
 

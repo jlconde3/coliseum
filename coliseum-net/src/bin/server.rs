@@ -28,13 +28,29 @@ impl Server {
 
             Ok(data) => {
                 let account = self.app.create_account(data.username);
-                let response = Response {
-                    origin_addr: self.addr.clone().to_string(),
-                    target_addr: stream.peer_addr().unwrap().to_string(),
-                    data: serde_json::to_string(&account).unwrap(),
-                    status: 200,
-                };
-                response.send(&mut stream);
+
+                match account {
+                    Ok(data) => {
+                        let response = Response {
+                            origin_addr: self.addr.clone().to_string(),
+                            target_addr: stream.peer_addr().unwrap().to_string(),
+                            data: data,
+                            status: 200,
+                        };
+                        response.send(&mut stream);
+                    }
+
+                    // Internal server error
+                    Err(error) => {
+                        let response = Response {
+                            origin_addr: self.addr.clone().to_string(),
+                            target_addr: stream.peer_addr().unwrap().to_string(),
+                            data: error,
+                            status: 500,
+                        };
+                        response.send(&mut stream);
+                    }
+                }
             }
         }
     }
@@ -168,20 +184,25 @@ impl Server {
 
     fn run(&mut self) {
         println!("Listening on: {}", &self.addr);
-        let listener = TcpListener::bind(&self.addr).unwrap();
 
-        for stream in listener.incoming() {
-            // Procesamiento de las conexiones
-            let mut stream = stream.unwrap();
-            let mut buf = [0; 1024];
-            let mut reader = BufReader::new(&mut stream);
-            let n = reader.read(&mut buf).unwrap();
-            let connection = String::from_utf8_lossy(&buf[..n]).to_string();
-
-            // Se transforma el str a una estructura Request para procesar
-
-            self.handle_connection(connection, stream);
-        }
+        match TcpListener::bind(&self.addr){
+            Err(_) => {
+                println!("Unavaliable to bind to {}", &self.addr);
+            }
+            Ok(listener)=>{
+                for stream in listener.incoming() {
+                    // Procesamiento de las conexiones
+                    let mut stream = stream.unwrap();
+                    let mut buf = [0; 1024];
+                    let mut reader = BufReader::new(&mut stream);
+                    let n = reader.read(&mut buf).unwrap();
+                    let connection = String::from_utf8_lossy(&buf[..n]).to_string();
+        
+                    // Se transforma el str a una estructura Request para procesar
+                    self.handle_connection(connection, stream);
+                }
+            }
+        };
     }
 }
 
