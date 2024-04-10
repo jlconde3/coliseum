@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::error;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -27,7 +28,7 @@ pub struct Account {
 
 impl Account {
     pub fn to_string(self) -> Result<String, String> {
-        match serde_json::to_string(&self.clone()){
+        match serde_json::to_string(&self.clone()) {
             Ok(data) => Ok(data),
             Err(error) => {
                 println!("{}", error);
@@ -79,7 +80,7 @@ impl App {
             created_time: timestamp.clone(),
             last_login: timestamp.clone(),
             username,
-            balance: 0.0,
+            balance: 10.0,
         };
 
         let account_str = account.clone().to_string();
@@ -93,17 +94,15 @@ impl App {
         }
     }
 
-    /// Dyanamic -> Get an specific account query by its account ID
-    pub fn get_account(&mut self, account_id: &str) -> Result<&mut Account, ()> {
+    /// Dynamic -> Get a specific account query by its account ID
+    pub fn get_account(&mut self, account_id: &str) -> Result<&mut Account, String> {
         for account in self.accounts.iter_mut() {
             if account_id == account.id {
                 return Ok(account);
-            } else {
-                continue;
             }
         }
-        println!("Account with ID {} not found", account_id);
-        Err(())
+        let error = format!("Account with ID {} not found", account_id);
+        Err(error)
     }
 
     /// Static -> Create a new transaction but it is not check
@@ -111,18 +110,44 @@ impl App {
         &mut self,
         from_id: String,
         to_id: String,
-        amount: f64,
-    ) -> Transaction {
+        amount: String,
+    ) -> Result<Transaction, String> {
         let transaction = Transaction {
             id: App::create_uuid(),
             from_id,
             to_id,
-            amount,
+            amount: amount.parse::<f64>().unwrap(),
             timestamp: App::create_timestamp(),
             node: self.addr.clone(),
         };
 
-        transaction
+        let account_from = self.get_account(&transaction.from_id);
+
+        match account_from {
+            Ok(account) => {
+                if account.balance > transaction.amount {
+                    account.balance = account.balance - transaction.amount.clone();
+                } else {
+                    return Err(format!(
+                        "La cuenta origen no tiene fondos suficientes {}",
+                        account.balance
+                    ));
+                }
+            }
+            Err(error) => return Err(error),
+        };
+
+        let account_to = self.get_account(&transaction.to_id);
+
+        match account_to {
+            Ok(account) => {
+                account.balance = account.balance + transaction.amount.clone();
+            }
+            Err(error) => return Err(error),
+        }
+        self.transactions.push(transaction.clone());
+
+        Ok(transaction)
     }
 
     /// Static -> Get all transactions stored in App
@@ -153,44 +178,6 @@ impl App {
             }
         }
         transactions
-    }
-
-    /// Static -> Check if a transaction is valid
-    pub fn check_transaction(&mut self, transaction: Transaction) -> bool {
-        let account_from = self.get_account(&transaction.from_id);
-
-        match account_from {
-            Ok(account) => {
-                if account.balance > transaction.amount {
-                    println!("La cuenta  origen tiene fondos suficientes");
-                    account.balance = account.balance - transaction.amount.clone();
-                } else {
-                    println!(
-                        "La cuenta origen no tiene fondos suficientes {}",
-                        account.balance
-                    );
-                    return false;
-                }
-            }
-            Err(()) => {
-                return false;
-            }
-        };
-
-        let account_to = self.get_account(&transaction.to_id);
-
-        match account_to {
-            Ok(account) => {
-                println!("La cuenta de destino existe");
-                account.balance = account.balance + transaction.amount.clone();
-            }
-            Err(()) => {
-                return false;
-            }
-        }
-
-        self.transactions.push(transaction.clone());
-        true
     }
 }
 
@@ -256,5 +243,5 @@ pub struct GetAccountData {
 pub struct CreateTransactionData {
     pub from_id: String,
     pub to_id: String,
-    pub amount: f64,
+    pub amount: String,
 }

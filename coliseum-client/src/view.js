@@ -8,20 +8,16 @@ async function client_request(port, ip_address, request) {
             client.write(JSON.stringify(request));
         });
 
-
         client.on('data', (response) => {
-            console.log(response);
+            resolve(response.toString());
             client.end();
-            resolve(response);
         });
-
 
         client.on('error', (error) => {
             console.error('An error occurred: ' + error.message);
             client.end();
             reject(error);
         });
-
 
         client.on('close', () => {
             console.log('Connection closed with:' + ip_address + ":" + port);
@@ -58,20 +54,22 @@ async function get_account_information() {
     let splitNodeIp = nodeIp.split(":");
     let ip_address = splitNodeIp[0];
     let port = splitNodeIp[1];
-    let userName = document.getElementById("user_name").value;
+    let accountId = document.getElementById("account_id").value;
 
     let request = {
-        entity: "CLIENT",
-        action: "GET_ACCOUNT",
-        data: { user_name: userName }
+        endpoint: "GetAccount",
+        origin_addr: "localhost",
+        target_addr: "127.0.0.1:5000",
+        data: JSON.stringify({ account_id:accountId })
     };
 
     try {
         const response = JSON.parse(await client_request(port, ip_address, request));
         const data = JSON.parse(response.data);
-        document.getElementById("user_id").value = data.id;
+        console.log(data)
+
         document.getElementById("account_balance").value = data.balance;
-        display_transactions(data.transactions);
+        //display_transactions(data.transactions);
     } catch (error) {
         console.error('Error:', error);
     }
@@ -83,27 +81,28 @@ async function create_transaction() {
     let ip_address = splitNodeIp[0];
     let port = splitNodeIp[1];
 
-    let account_id = document.getElementById("user_id").value;
-    let transaction_from = document.getElementById("user_name").value;
-    let transaction_to = document.getElementById("new_transaction_to").value;
-    let transaction_amount = document.getElementById("new_transaction_amount").value;
+    let from_id = document.getElementById("account_id").value;
+    let to_id = document.getElementById("to_id").value;
+    let amount = document.getElementById("amount").value;
 
     let data = {
-        account_id: account_id,
-        from: transaction_from,
-        to: transaction_to,
-        amount: transaction_amount
+        from_id: from_id,
+        to_id: to_id,
+        amount: amount
     };
 
     let request = {
-        entity: "CLIENT",
-        action: "CREATE_TRANSACTION",
-        data: data
+        endpoint: "CreateTransaction",
+        origin_addr: "localhost",
+        target_addr: "127.0.0.1:5000",
+        data: JSON.stringify(data)
     };
+
+    console.log(request);
 
     try {
         const response = JSON.parse(await client_request(port, ip_address, request));
-        console.log(response);
+        console.log(JSON.parse(response.data));
     } catch (error) {
         console.error('Error:', error);
     }

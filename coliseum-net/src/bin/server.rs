@@ -99,6 +99,7 @@ impl Server {
 
     /// Gestiona una conexión entrante para la creación de una transacción
     fn create_transaction(&mut self, request: Request, mut stream: TcpStream) {
+        
         let data: Result<CreateTransactionData, serde_json::Error> =
             serde_json::from_str(&request.data);
 
@@ -117,6 +118,7 @@ impl Server {
                 let transaction =
                     self.app
                         .create_transaction(data.from_id, data.to_id, data.amount);
+
                 let response = Response {
                     origin_addr: self.addr.clone().to_string(),
                     target_addr: stream.peer_addr().unwrap().to_string(),
@@ -146,8 +148,9 @@ impl Server {
         match request {
             Err(_) => {
                 println!(
-                    "{} - {}",
+                    "{} - {} - {}",
                     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    stream.peer_addr().unwrap().to_string(),
                     "Request does not satisfied protocol"
                 );
 

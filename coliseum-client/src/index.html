@@ -22,13 +22,10 @@
             <h3>User Information</h3>
             <p>Select a node to connect to Coliseum Net</p>
             <label for="node_ip">Node IP Address</label><br>
-            <input type="text" name="node_ip" id="node_ip" required><br>
-            <p>Introduce your username</p>
-            <input type="text" id="user_name"><br>
+            <input type="text" name="node_ip" id="node_ip" required value="127.0.0.1:5000"><br>
+            <p>Introduce your Account ID</p>
+            <input type="text" id="account_id"><br>
             <button id="log_in_botton">LogIn</button>
-            <h4>Account ID</h4>
-            <input type="text" id="user_id" disabled>
-
         </div>
         <div id="balance">
             <h4>Balance</h4>
@@ -56,11 +53,11 @@
         <h2>Create transaction</h2>
         <div>
             <p>Fill these fields to create a new transaction</p>
-            <label for="new_transaction_to">To:</label><br>
-            <input id="new_transaction_to" type="text"><br>
-            <label for="new_transaction_amount">Amount</label><br>
-            <input id="new_transaction_amount" type="number"><br>
-            <button id="transaction_botton">Create</button>
+            <label for="to_id">To:</label><br>
+            <input id="to_id" type="text"><br>
+            <label for="amount">Amount</label><br>
+            <input id="amount" type="number"><br>
+            <button id="new_transaction">Create</button>
         </div>
     </div>
 </body>
