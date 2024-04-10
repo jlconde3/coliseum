@@ -1,5 +1,6 @@
 extern crate lib;
 
+use chrono::Utc;
 use lib::{App, CreateAccountData, CreateTransactionData, GetAccountData, Request, Response};
 use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
@@ -12,58 +13,156 @@ struct Server {
 impl Server {
     /// Gestiona una conexión entrante para la creación de una cuenta
     fn create_account(&mut self, request: Request, mut stream: TcpStream) {
-        let data: CreateAccountData = serde_json::from_str(&request.data).unwrap();
-        let account = self.app.create_account(data.username);
-        let response = Response {
-            origin_addr: self.addr.clone().to_string(),
-            target_addr: stream.peer_addr().unwrap().to_string(),
-            data: serde_json::to_string(&account).unwrap(),
-            status: 200,
-        };
-        response.send(&mut stream);
+        let data: Result<CreateAccountData, serde_json::Error> =
+            serde_json::from_str(&request.data);
+        match data {
+            Err(_) => {
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: "Request Data is not valid".to_string(),
+                    status: 401,
+                };
+                response.send(&mut stream);
+            }
+
+            Ok(data) => {
+                let account = self.app.create_account(data.username);
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: serde_json::to_string(&account).unwrap(),
+                    status: 200,
+                };
+                response.send(&mut stream);
+            }
+        }
     }
 
     /// Gestiona una conexión entrante para la obtención de una cuenta
     fn get_account(&mut self, request: Request, mut stream: TcpStream) {
-        let data: GetAccountData = serde_json::from_str(&request.data).unwrap();
-        let account = self.app.get_account(&data.account_id).unwrap();
-        let response = Response {
-            origin_addr: self.addr.clone().to_string(),
-            target_addr: stream.peer_addr().unwrap().to_string(),
-            data: serde_json::to_string(account).unwrap(),
-            status: 200,
-        };
-        response.send(&mut stream);
+        let data: Result<GetAccountData, serde_json::Error> = serde_json::from_str(&request.data);
+
+        match data {
+            Err(_) => {
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: "Request Data is not valid".to_string(),
+                    status: 401,
+                };
+                response.send(&mut stream);
+            }
+
+            Ok(data) => {
+                let account = self.app.get_account(&data.account_id);
+                match account {
+                    Err(_) => {
+                        let response = Response {
+                            origin_addr: self.addr.clone().to_string(),
+                            target_addr: stream.peer_addr().unwrap().to_string(),
+                            data: format!("Account with ID: {} not found", data.account_id),
+                            status: 402,
+                        };
+                        response.send(&mut stream);
+                    }
+
+                    Ok(account) => {
+                        let response = Response {
+                            origin_addr: self.addr.clone().to_string(),
+                            target_addr: stream.peer_addr().unwrap().to_string(),
+                            data: serde_json::to_string(account).unwrap(),
+                            status: 200,
+                        };
+                        response.send(&mut stream);
+                    }
+                }
+            }
+        }
     }
 
     /// Gestiona una conexión entrante para la creación de una transacción
     fn create_transaction(&mut self, request: Request, mut stream: TcpStream) {
-        let data: CreateTransactionData = serde_json::from_str(&request.data).unwrap();
-        let transaction = self
-            .app
-            .create_transaction(data.from_id, data.to_id, data.amount);
+        let data: Result<CreateTransactionData, serde_json::Error> =
+            serde_json::from_str(&request.data);
+
+        match data {
+            Err(_) => {
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: "Request Data is not valid".to_string(),
+                    status: 401,
+                };
+                response.send(&mut stream);
+            }
+
+            Ok(data) => {
+                let transaction =
+                    self.app
+                        .create_transaction(data.from_id, data.to_id, data.amount);
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: serde_json::to_string(&transaction).unwrap(),
+                    status: 200,
+                };
+                response.send(&mut stream);
+            }
+        }
+    }
+
+    fn handle_incorrect_endpoint(&mut self, request: Request, mut stream: TcpStream) {
         let response = Response {
             origin_addr: self.addr.clone().to_string(),
             target_addr: stream.peer_addr().unwrap().to_string(),
-            data: serde_json::to_string(&transaction).unwrap(),
-            status: 200,
+            data: format!("{} endpoint not found", request.endpoint),
+            status: 400,
         };
+
         response.send(&mut stream);
     }
 
     /// Gestiona la conexiones entrantes según el endpoint
-    fn handle_connection(&mut self, request: Request, stream: TcpStream) {
-        println!("{}:{}", request.origin_addr, request.endpoint);
+    fn handle_connection(&mut self, connection: String, mut stream: TcpStream) {
+        let request: Result<Request, serde_json::Error> = serde_json::from_str(&connection);
 
-        // El servidor actua según el endpoint dentro de la Request
-        if request.endpoint == "GetAccount" {
-            self.get_account(request, stream);
-        } else if request.endpoint == "CreateAccount" {
-            self.create_account(request, stream);
-        } else if request.endpoint == "CreateTransaction" {
-            self.create_transaction(request, stream);
-        } else {
-            println!("Invalid endpoint");
+        match request {
+            Err(_) => {
+                println!(
+                    "{} - {}",
+                    Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    "Request does not satisfied protocol"
+                );
+
+                let response = Response {
+                    origin_addr: self.addr.clone().to_string(),
+                    target_addr: stream.peer_addr().unwrap().to_string(),
+                    data: "Request is not valid".to_string(),
+                    status: 405,
+                };
+                response.send(&mut stream);
+            }
+
+            Ok(request) => {
+                println!(
+                    "{} - {} - {}",
+                    Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    request.origin_addr,
+                    request.endpoint
+                );
+
+                // El servidor actua según el endpoint dentro de la Request
+                if request.endpoint == "GetAccount" {
+                    self.get_account(request, stream);
+                } else if request.endpoint == "CreateAccount" {
+                    self.create_account(request, stream);
+                } else if request.endpoint == "CreateTransaction" {
+                    self.create_transaction(request, stream);
+                } else {
+                    self.handle_incorrect_endpoint(request, stream);
+                }
+            }
         }
     }
 
@@ -80,8 +179,8 @@ impl Server {
             let connection = String::from_utf8_lossy(&buf[..n]).to_string();
 
             // Se transforma el str a una estructura Request para procesar
-            let request: Request = serde_json::from_str(&connection).unwrap();
-            self.handle_connection(request, stream);
+
+            self.handle_connection(connection, stream);
         }
     }
 }

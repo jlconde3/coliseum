@@ -185,7 +185,7 @@ pub struct Response {
     pub origin_addr: String,
     pub target_addr: String,
     pub data: String,
-    pub status: u8,
+    pub status: u16,
 }
 
 impl Response {
