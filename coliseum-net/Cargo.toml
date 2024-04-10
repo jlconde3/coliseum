@@ -17,3 +17,8 @@ src="client.rs"
 [[bin]]
 name="server"
 src="server.rs"
+
+
+[lib]
+name="lib"
+src="lib.rs"
