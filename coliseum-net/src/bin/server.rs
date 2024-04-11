@@ -200,7 +200,6 @@ impl Server {
                     let mut reader = BufReader::new(&mut stream);
                     let n = reader.read(&mut buf).unwrap();
                     let connection = String::from_utf8_lossy(&buf[..n]).to_string();
-        
                     // Se transforma el str a una estructura Request para procesar
                     self.handle_connection(connection, stream);
                 }
